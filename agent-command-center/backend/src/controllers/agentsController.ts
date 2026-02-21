@@ -1,5 +1,9 @@
 import type { Request, Response } from "express";
-import { getAgentById, listAgents } from "../services/agentService.js";
+import {
+  getAgentById,
+  getAgentUsageStatsById,
+  listAgents,
+} from "../services/agentService.js";
 import { logError } from "../utils/logger.js";
 
 export const getAgents = async (_req: Request, res: Response): Promise<void> => {
@@ -26,5 +30,22 @@ export const getAgent = async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     logError(`Failed to load agent ${String(req.params.id)}`, error);
     res.status(500).json({ error: "Failed to load agent" });
+  }
+};
+
+export const getAgentUsage = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const agentId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const usageStats = await getAgentUsageStatsById(agentId);
+
+    if (!usageStats) {
+      res.status(404).json({ error: "Agent not found" });
+      return;
+    }
+
+    res.json({ data: usageStats });
+  } catch (error) {
+    logError(`Failed to load usage stats for agent ${String(req.params.id)}`, error);
+    res.status(500).json({ error: "Failed to load usage stats" });
   }
 };
