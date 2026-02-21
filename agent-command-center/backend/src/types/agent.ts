@@ -28,3 +28,22 @@ export interface SessionMetadata {
   lastActive?: string;
   status: AgentStatus;
 }
+
+export type AgentUsageResponse =
+  | Record<string, unknown>
+  | {
+      profiles: Record<string, unknown>;
+    };
+
+export interface AgentLogMessage {
+  timestamp: string;
+  role: string;
+  content: string;
+}
+
+export interface AgentLogsResponse {
+  isRunning: boolean;
+  lastActive?: string;
+  sessionId?: string;
+  recentMessages: AgentLogMessage[];
+}

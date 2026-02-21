@@ -1,8 +1,9 @@
 import { promises as fs } from "node:fs";
-import path from "node:path";
 import os from "node:os";
-const OPENCLAW_ROOT = path.join(os.homedir(), ".openclaw");
-const AGENTS_ROOT = path.join(OPENCLAW_ROOT, "agents");
+import path from "node:path";
+const AGENTS_ROOT = path.join(os.homedir(), ".openclaw", "agents");
+const RUNNING_THRESHOLD_MS = 10 * 60 * 1000;
+const DEFAULT_LOG_LIMIT = 50;
 const isAgentStatus = (value) => value === "idle" || value === "busy" || value === "error";
 const safeJsonParse = (input) => {
     try {
@@ -88,6 +89,63 @@ const parseSessionMetadata = async (sessionsDir) => {
         return { status: "idle" };
     }
 };
+const toTextContent = (value) => {
+    if (typeof value === "string") {
+        return value;
+    }
+    if (!Array.isArray(value)) {
+        return null;
+    }
+    const textParts = value
+        .map((part) => {
+        if (!part || typeof part !== "object") {
+            return null;
+        }
+        const maybeText = part.text;
+        return typeof maybeText === "string" ? maybeText : null;
+    })
+        .filter((text) => Boolean(text));
+    return textParts.length > 0 ? textParts.join("\n") : null;
+};
+const parseLogMessage = (line) => {
+    const event = safeJsonParse(line);
+    if (!event) {
+        return null;
+    }
+    const eventTimestamp = typeof event.timestamp === "string"
+        ? event.timestamp
+        : typeof event.time === "string"
+            ? event.time
+            : typeof event.createdAt === "string"
+                ? event.createdAt
+                : null;
+    const maybeMessage = event.message;
+    if (!maybeMessage || typeof maybeMessage !== "object") {
+        return null;
+    }
+    const roleValue = maybeMessage.role;
+    const contentValue = maybeMessage.content;
+    const messageTimestamp = maybeMessage.timestamp;
+    const role = typeof roleValue === "string" ? roleValue : null;
+    const content = toTextContent(contentValue);
+    const timestamp = typeof messageTimestamp === "number"
+        ? new Date(messageTimestamp).toISOString()
+        : eventTimestamp;
+    if (!role || !content || !timestamp) {
+        return null;
+    }
+    return { timestamp, role, content };
+};
+const isWithinRunningThreshold = (isoTimestamp) => {
+    if (!isoTimestamp) {
+        return false;
+    }
+    const timestampMs = Date.parse(isoTimestamp);
+    if (Number.isNaN(timestampMs)) {
+        return false;
+    }
+    return Date.now() - timestampMs <= RUNNING_THRESHOLD_MS;
+};
 const mapAgent = async (agentId) => {
     const agentDir = path.join(AGENTS_ROOT, agentId);
     const identity = await readIdentity(agentDir);
@@ -106,75 +164,6 @@ const mapAgent = async (agentId) => {
             count: fileCount,
             latestFile: fileName,
         },
-    };
-};
-const getTimestampFromEvent = (event) => {
-    if (!event || typeof event !== "object") {
-        return null;
-    }
-    const tsCandidate = event.timestamp ?? event.time ?? event.createdAt ?? event.ts;
-    if (typeof tsCandidate !== "string") {
-        return null;
-    }
-    const parsed = Date.parse(tsCandidate);
-    return Number.isNaN(parsed) ? null : new Date(parsed).toISOString();
-};
-const extractMessageFromEvent = (event) => {
-    if (!event || typeof event !== "object") {
-        return null;
-    }
-    const type = typeof event.type === "string" ? event.type.toLowerCase() : "";
-    const kind = typeof event.kind === "string" ? event.kind.toLowerCase() : "";
-    const name = typeof event.event === "string" ? event.event.toLowerCase() : "";
-    const likelyMessage = type.includes("message") || kind.includes("message") || name.includes("message") || "role" in event || "content" in event || "message" in event;
-    if (!likelyMessage) {
-        return null;
-    }
-    const roleCandidate = event.role ?? event.sender ?? event.author ?? event.message?.role;
-    const role = typeof roleCandidate === "string" ? roleCandidate : "unknown";
-    if (role === "toolResult") {
-        return null;
-    }
-    let content = null;
-    if (typeof event.content === "string") {
-        content = event.content;
-    }
-    else if (typeof event.message === "string") {
-        content = event.message;
-    }
-    else if (typeof event.message?.content === "string") {
-        content = event.message.content;
-    }
-    else if (Array.isArray(event.content)) {
-        content = event.content.map((part) => {
-            if (typeof part === "string") {
-                return part;
-            }
-            if (part && typeof part === "object" && "text" in part && typeof part.text === "string") {
-                return part.text;
-            }
-            return "";
-        }).join("\n").trim();
-    }
-    else if (Array.isArray(event.message?.content)) {
-        content = event.message.content.map((part) => {
-            if (typeof part === "string") {
-                return part;
-            }
-            if (part && typeof part === "object" && "text" in part && typeof part.text === "string") {
-                return part.text;
-            }
-            return "";
-        }).join("\n").trim();
-    }
-    if (!content || !content.trim()) {
-        return null;
-    }
-    const normalizedContent = content.trim();
-    return {
-        role,
-        content: normalizedContent.length > 2000 ? `${normalizedContent.slice(0, 2000)}…` : normalizedContent,
-        timestamp: getTimestampFromEvent(event),
     };
 };
 export const listAgents = async () => {
@@ -196,112 +185,90 @@ export const getAgentById = async (agentId) => {
     }
     return mapAgent(agentId);
 };
-export const listAgentSkills = async (agentId) => {
-    const skillsRoot = path.join(OPENCLAW_ROOT, `workspace-${agentId}`, "skills");
+export const getAgentLogsById = async (agentId, limit = DEFAULT_LOG_LIMIT) => {
+    const agentDir = path.join(AGENTS_ROOT, agentId);
     try {
-        const entries = await fs.readdir(skillsRoot, { withFileTypes: true });
-        return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
-    }
-    catch (error) {
-        if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
-            return [];
-        }
-        throw error;
-    }
-};
-export const getAgentSkill = async (agentId, skillName) => {
-    const skillsRoot = path.join(OPENCLAW_ROOT, `workspace-${agentId}`, "skills");
-    const resolvedSkillPath = path.resolve(skillsRoot, skillName);
-    if (!resolvedSkillPath.startsWith(path.resolve(skillsRoot) + path.sep)) {
-        return null;
-    }
-    const skillFilePath = path.join(resolvedSkillPath, "SKILL.md");
-    try {
-        const content = await fs.readFile(skillFilePath, "utf8");
-        return { name: skillName, content };
-    }
-    catch (error) {
-        if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+        const stats = await fs.stat(agentDir);
+        if (!stats.isDirectory()) {
             return null;
         }
-        throw error;
+    }
+    catch {
+        return null;
+    }
+    const sessionDir = path.join(agentDir, "sessions");
+    const { fileName } = await findLatestSessionFile(sessionDir);
+    if (!fileName) {
+        return {
+            isRunning: false,
+            recentMessages: [],
+        };
+    }
+    const filePath = path.join(sessionDir, fileName);
+    try {
+        const content = await fs.readFile(filePath, "utf8");
+        const lines = content
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(Boolean);
+        const parsedMessages = lines
+            .map((line) => parseLogMessage(line))
+            .filter((message) => message !== null);
+        const recentMessages = parsedMessages.slice(-Math.max(1, limit));
+        const lastActive = recentMessages.at(-1)?.timestamp;
+        return {
+            isRunning: isWithinRunningThreshold(lastActive),
+            lastActive,
+            sessionId: path.basename(fileName, ".jsonl"),
+            recentMessages,
+        };
+    }
+    catch {
+        return {
+            isRunning: false,
+            recentMessages: [],
+            sessionId: path.basename(fileName, ".jsonl"),
+        };
     }
 };
-export const getAgentUsageStats = async (agentId) => {
-    const profilesPath = path.join(AGENTS_ROOT, agentId, "agent", "auth-profiles.json");
-    let content;
+export const getAgentUsageById = async (agentId) => {
+    const agentDir = path.join(AGENTS_ROOT, agentId);
     try {
-        content = await fs.readFile(profilesPath, "utf8");
+        const stats = await fs.stat(agentDir);
+        if (!stats.isDirectory()) {
+            return null;
+        }
     }
-    catch (error) {
-        if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+    catch {
+        return null;
+    }
+    const authProfilesPath = path.join(agentDir, "agent", "auth-profiles.json");
+    try {
+        const content = await fs.readFile(authProfilesPath, "utf8");
+        const parsed = safeJsonParse(content);
+        if (!parsed?.profiles || typeof parsed.profiles !== "object") {
             return {};
         }
-        throw error;
+        const usageByProfile = {};
+        for (const [profileName, profileValue] of Object.entries(parsed.profiles)) {
+            if (!profileValue || typeof profileValue !== "object") {
+                continue;
+            }
+            const usageStats = profileValue.usageStats;
+            if (usageStats && typeof usageStats === "object") {
+                usageByProfile[profileName] = usageStats;
+            }
+        }
+        if (Object.keys(usageByProfile).length === 0) {
+            return {};
+        }
+        if (Object.keys(usageByProfile).length === 1) {
+            return Object.values(usageByProfile)[0];
+        }
+        return { profiles: usageByProfile };
     }
-    const parsed = safeJsonParse(content);
-    if (!parsed || typeof parsed !== "object") {
+    catch {
         return {};
     }
-    const profiles = "profiles" in parsed && parsed.profiles && typeof parsed.profiles === "object"
-        ? parsed.profiles
-        : {};
-    const usageStats = {};
-    for (const [profileName, profileValue] of Object.entries(profiles)) {
-        if (!profileValue || typeof profileValue !== "object" || !("usageStats" in profileValue)) {
-            continue;
-        }
-        usageStats[profileName] = profileValue.usageStats;
-    }
-    return usageStats;
-};
-export const getAgentLogs = async (agentId) => {
-    const sessionsDir = path.join(AGENTS_ROOT, agentId, "sessions");
-    let entries;
-    try {
-        entries = await fs.readdir(sessionsDir, { withFileTypes: true });
-    }
-    catch (error) {
-        if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
-            return { isRunning: false, lastActive: null, sessionId: null, recentMessages: [] };
-        }
-        throw error;
-    }
-    const files = entries.filter((entry) => entry.isFile() && entry.name.endsWith(".jsonl"));
-    if (files.length === 0) {
-        return { isRunning: false, lastActive: null, sessionId: null, recentMessages: [] };
-    }
-    const candidates = await Promise.all(files.map(async (file) => {
-        const filePath = path.join(sessionsDir, file.name);
-        const stats = await fs.stat(filePath);
-        return { filePath, fileName: file.name, mtimeMs: stats.mtimeMs };
-    }));
-    candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
-    const latest = candidates[0];
-    const content = await fs.readFile(latest.filePath, "utf8");
-    const lines = content.split("\n").map((line) => line.trim()).filter(Boolean);
-    const recentMessages = [];
-    let lastActive = new Date(latest.mtimeMs).toISOString();
-    for (const line of lines) {
-        const event = safeJsonParse(line);
-        if (!event) {
-            continue;
-        }
-        const ts = getTimestampFromEvent(event);
-        if (ts && Date.parse(ts) > Date.parse(lastActive)) {
-            lastActive = ts;
-        }
-        const message = extractMessageFromEvent(event);
-        if (message) {
-            recentMessages.push(message);
-        }
-    }
-    const isRunning = Date.parse(lastActive) >= Date.now() - 10 * 60 * 1000;
-    return {
-        isRunning,
-        lastActive,
-        sessionId: latest.fileName.replace(/\.jsonl$/i, ""),
-        recentMessages: recentMessages.slice(-50),
-    };
 };
 export const getAgentsRoot = () => AGENTS_ROOT;
