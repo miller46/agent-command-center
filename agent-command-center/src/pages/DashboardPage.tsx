@@ -1,6 +1,7 @@
 import React from 'react';
 import { mockAgents } from '../data/mockAgents';
 import { StatusBadge } from '../components/StatusBadge';
+import { formatLastActive } from '../utils/formatLastActive';
 import { 
   Bot, 
   Activity, 
@@ -105,7 +106,7 @@ export const DashboardPage: React.FC = () => {
                   <StatusBadge status={agent.status} />
                   <div className="flex items-center gap-1 text-sm text-slate-400">
                     <Clock size={14} />
-                    <span>{agent.lastActive ? 'Just now' : 'Never'}</span>
+                    <span>{formatLastActive(agent.lastActive)}</span>
                   </div>
                 </div>
               </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import type { Agent } from '../types/agent';
 import { StatusBadge } from './StatusBadge';
+import { formatLastActive } from '../utils/formatLastActive';
 import { Clock, ArrowRight } from 'lucide-react';
 
 interface AgentCardProps {
@@ -9,20 +10,6 @@ interface AgentCardProps {
 }
 
 export const AgentCard: React.FC<AgentCardProps> = ({ agent }) => {
-  const formatLastActive = (date?: Date) => {
-    if (!date) return 'Never';
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    return `${days}d ago`;
-  };
-
   return (
     <Link to={`/agents/${agent.id}`}>
       <div className="bg-white rounded-xl border border-slate-200 p-6 hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer group">
