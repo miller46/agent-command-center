@@ -3,9 +3,31 @@ import type { Agent } from '../types/agent';
 
 interface StatusBadgeProps {
   status: Agent['status'];
+  variant?: 'default' | 'terminal';
 }
 
-export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
+export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, variant = 'terminal' }) => {
+  if (variant === 'terminal') {
+    const statusClasses = {
+      idle: 'matrix-status-idle',
+      busy: 'matrix-status-busy',
+      error: 'matrix-status-error',
+    };
+
+    const labels = {
+      idle: 'ONLINE',
+      busy: 'BUSY',
+      error: 'ERROR',
+    };
+
+    return (
+      <span className={`matrix-status ${statusClasses[status]}`}>
+        {labels[status]}
+      </span>
+    );
+  }
+
+  // Fallback to default styling
   const styles = {
     idle: 'bg-green-100 text-green-800 border-green-200',
     busy: 'bg-amber-100 text-amber-800 border-amber-200',

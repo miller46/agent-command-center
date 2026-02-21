@@ -1,1 +1,307 @@
-@import "tailwindcss";
+/** Matrix Terminal Theme - Agent Command Center */
+
+/* Matrix Color Palette */
+:root {
+  --matrix-black: #000000;
+  --matrix-green: #00FF41;
+  --matrix-green-dim: #008F11;
+  --matrix-green-dark: #003B00;
+  --matrix-green-glow: rgba(0, 255, 65, 0.6);
+  --matrix-green-faint: rgba(0, 255, 65, 0.2);
+  --matrix-green-text: #0F0;
+  --crt-scanline: rgba(0, 255, 65, 0.03);
+  --terminal-font: 'Courier New', 'Consolas', 'Monaco', 'Lucida Console', monospace;
+}
+
+/* Matrix Page Container - Scoped Theme */
+.matrix-page {
+  background-color: var(--matrix-black);
+  color: var(--matrix-green);
+  font-family: var(--terminal-font);
+  min-height: 100vh;
+}
+
+.matrix-page * {
+  box-sizing: border-box;
+}
+
+/* CRT Scanline Effect */
+.crt-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0) 50%,
+    var(--crt-scanline) 50%,
+    var(--crt-scanline)
+  );
+  background-size: 100% 4px;
+  animation: scanlines 0.1s linear infinite;
+}
+
+.crt-overlay::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
+  pointer-events: none;
+}
+
+@keyframes scanlines {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 4px;
+  }
+}
+
+/* Matrix Glow Effects */
+.matrix-glow {
+  text-shadow: 0 0 5px var(--matrix-green-glow),
+               0 0 10px var(--matrix-green-glow),
+               0 0 20px var(--matrix-green-glow);
+}
+
+.matrix-glow-subtle {
+  text-shadow: 0 0 3px var(--matrix-green-glow),
+               0 0 6px var(--matrix-green-faint);
+}
+
+.matrix-border-glow {
+  box-shadow: 0 0 5px var(--matrix-green-faint),
+              0 0 10px var(--matrix-green-faint),
+              inset 0 0 5px var(--matrix-green-faint);
+}
+
+.matrix-border-glow:hover {
+  box-shadow: 0 0 10px var(--matrix-green-glow),
+              0 0 20px var(--matrix-green-faint),
+              inset 0 0 10px var(--matrix-green-faint);
+}
+
+/* Matrix Card Styling */
+.matrix-card {
+  background-color: rgba(0, 0, 0, 0.9);
+  border: 1px solid var(--matrix-green-dim);
+  border-radius: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.matrix-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 255, 65, 0.1),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.matrix-card:hover::before {
+  left: 100%;
+}
+
+/* Matrix Button Styling */
+.matrix-button {
+  background-color: transparent;
+  border: 1px solid var(--matrix-green);
+  color: var(--matrix-green);
+  font-family: var(--terminal-font);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.matrix-button:hover {
+  background-color: var(--matrix-green);
+  color: var(--matrix-black);
+  box-shadow: 0 0 15px var(--matrix-green-glow);
+}
+
+.matrix-button::before {
+  content: '> ';
+}
+
+/* Matrix Input Styling */
+.matrix-input {
+  background-color: rgba(0, 59, 0, 0.3);
+  border: 1px solid var(--matrix-green-dim);
+  color: var(--matrix-green);
+  font-family: var(--terminal-font);
+}
+
+.matrix-input:focus {
+  outline: none;
+  border-color: var(--matrix-green);
+  box-shadow: 0 0 10px var(--matrix-green-faint);
+}
+
+.matrix-input::placeholder {
+  color: var(--matrix-green-dim);
+}
+
+/* Blinking Cursor */
+.blink-cursor::after {
+  content: '█';
+  animation: blink 1s step-end infinite;
+  margin-left: 2px;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Matrix Status Indicators */
+.matrix-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.matrix-status::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background-color: currentColor;
+  box-shadow: 0 0 5px currentColor;
+}
+
+.matrix-status-idle {
+  color: var(--matrix-green);
+}
+
+.matrix-status-busy {
+  color: #FFD700;
+  text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+}
+
+.matrix-status-error {
+  color: #FF4136;
+  text-shadow: 0 0 5px rgba(255, 65, 54, 0.5);
+  animation: pulse-error 1s ease-in-out infinite;
+}
+
+@keyframes pulse-error {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Scrollbar Styling - Scoped to matrix-page */
+.matrix-page ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.matrix-page ::-webkit-scrollbar-track {
+  background: var(--matrix-black);
+}
+
+.matrix-page ::-webkit-scrollbar-thumb {
+  background: var(--matrix-green-dim);
+  border: 1px solid var(--matrix-green);
+}
+
+.matrix-page ::-webkit-scrollbar-thumb:hover {
+  background: var(--matrix-green);
+}
+
+/* Matrix Terminal Header */
+.matrix-header {
+  border-bottom: 1px solid var(--matrix-green-dim);
+  background-color: rgba(0, 59, 0, 0.2);
+}
+
+/* Selection Styling - Scoped to matrix-page */
+.matrix-page ::selection {
+  background-color: var(--matrix-green);
+  color: var(--matrix-black);
+}
+
+/* Fade In Animation */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-in;
+}
+
+/* Typewriter effect */
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+/* Binary Rain Canvas Background */
+#matrix-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  opacity: 0.15;
+}
+
+/* Utility Classes */
+.matrix-text-dim {
+  color: var(--matrix-green-dim);
+}
+
+.matrix-text-bright {
+  color: var(--matrix-green);
+  text-shadow: 0 0 10px var(--matrix-green-glow);
+}
+
+.matrix-border {
+  border: 1px solid var(--matrix-green-dim);
+}
+
+.matrix-border-bright {
+  border: 1px solid var(--matrix-green);
+}
+
+.matrix-bg-dark {
+  background-color: rgba(0, 0, 0, 0.9);
+}
+
+/* Terminal Prompt */
+.terminal-prompt::before {
+  content: '$ ';
+  color: var(--matrix-green-dim);
+}
+
+/* Grid Lines */
+.matrix-grid {
+  background-image: 
+    linear-gradient(rgba(0, 255, 65, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 65, 0.03) 1px, transparent 1px);
+  background-size: 20px 20px;
+}

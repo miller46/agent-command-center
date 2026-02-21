@@ -3,38 +3,60 @@ import { Link } from 'react-router-dom';
 import type { Agent } from '../types/agent';
 import { StatusBadge } from './StatusBadge';
 import { formatLastActive } from '../utils/formatLastActive';
-import { Clock, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 interface AgentCardProps {
   agent: Agent;
 }
 
 export const AgentCard: React.FC<AgentCardProps> = ({ agent }) => {
+  const getTypePrefix = (type: string) => {
+    const prefixes: Record<string, string> = {
+      'backend-dev': 'DEV',
+      'frontend-dev': 'DEV',
+      'database': 'DB',
+      'devops': 'OPS',
+      'testing': 'TST',
+    };
+    return prefixes[type] || 'AGT';
+  };
+
   return (
-    <Link to={`/agents/${agent.id}`}>
-      <div className="bg-white rounded-xl border border-slate-200 p-6 hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer group">
+    <Link to={`/agents/${agent.id}`} className="group block">
+      <div className="matrix-card matrix-border-glow p-6 h-full transition-all duration-300 group-hover:border-[#00FF41]">
+        {/* Header */}
         <div className="flex items-start justify-between mb-4">
-          <div>
-            <h3 className="font-semibold text-lg text-slate-900 group-hover:text-blue-600 transition-colors">
-              {agent.name}
-            </h3>
-            <p className="text-sm text-slate-500 mt-1">{agent.type}</p>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs text-[#008F11] font-mono">[{getTypePrefix(agent.type)}]</span>
+              <h3 className="font-mono text-lg text-[#00FF41] matrix-glow-subtle truncate">
+                {agent.name.toUpperCase()}
+              </h3>
+            </div>
+            <p className="text-xs text-[#008F11] font-mono tracking-wider">ID: {agent.id}</p>
           </div>
           <StatusBadge status={agent.status} />
         </div>
         
+        {/* Description */}
         {agent.description && (
-          <p className="text-slate-600 text-sm mb-4 line-clamp-2">{agent.description}</p>
+          <div className="mb-4">
+            <p className="text-sm text-[#00FF41] font-mono opacity-80 line-clamp-2 leading-relaxed">
+              <span className="text-[#008F11]">&gt; </span>
+              {agent.description.toUpperCase()}
+            </p>
+          </div>
         )}
         
-        <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <Clock size={14} />
-            <span>{formatLastActive(agent.lastActive)}</span>
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-4 border-t border-[#003B00]">
+          <div className="flex items-center gap-2 text-xs text-[#008F11] font-mono">
+            <span>LAST_SEEN:</span>
+            <span className="text-[#00FF41]">{formatLastActive(agent.lastActive)}</span>
           </div>
-          <div className="flex items-center gap-1 text-sm text-blue-600 font-medium group-hover:gap-2 transition-all">
-            View Details
-            <ArrowRight size={16} />
+          <div className="flex items-center gap-1 text-xs text-[#00FF41] font-mono group-hover:text-white transition-colors">
+            <span>ACCESS</span>
+            <ArrowRight size={14} className="transform group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
       </div>
