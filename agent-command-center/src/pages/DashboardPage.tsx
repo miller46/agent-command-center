@@ -19,7 +19,14 @@ export const DashboardPage: React.FC = () => {
     { label: 'Active Now', value: mockAgents.filter(a => a.status === 'busy').length, icon: Activity, color: 'green' },
     { label: 'Tasks Completed', value: 142, icon: CheckCircle, color: 'purple' },
     { label: 'Alerts', value: mockAgents.filter(a => a.status === 'error').length, icon: AlertTriangle, color: 'red' },
-  ];
+  ] as const;
+
+  const statColorClasses: Record<(typeof stats)[number]['color'], { bg: string; text: string }> = {
+    blue: { bg: 'bg-blue-100', text: 'text-blue-600' },
+    green: { bg: 'bg-green-100', text: 'text-green-600' },
+    purple: { bg: 'bg-purple-100', text: 'text-purple-600' },
+    red: { bg: 'bg-red-100', text: 'text-red-600' },
+  };
 
   return (
     <div className="p-6">
@@ -37,8 +44,8 @@ export const DashboardPage: React.FC = () => {
                 <p className="text-sm text-slate-500 mb-1">{stat.label}</p>
                 <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
               </div>
-              <div className={`w-12 h-12 bg-${stat.color}-100 rounded-lg flex items-center justify-center`}>
-                <stat.icon className={`text-${stat.color}-600`} size={24} />
+              <div className={`w-12 h-12 ${statColorClasses[stat.color].bg} rounded-lg flex items-center justify-center`}>
+                <stat.icon className={statColorClasses[stat.color].text} size={24} />
               </div>
             </div>
           </div>
