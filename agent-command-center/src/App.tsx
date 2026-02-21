@@ -15,7 +15,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   if (isAgentListPage) {
     // Agent List page has its own full Matrix theme layout
     return (
-      <div className="min-h-screen bg-black">
+      <div className="matrix-page">
         {children}
       </div>
     );

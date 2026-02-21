@@ -13,31 +13,16 @@
   --terminal-font: 'Courier New', 'Consolas', 'Monaco', 'Lucida Console', monospace;
 }
 
-/* Global Matrix Theme */
-* {
-  box-sizing: border-box;
-}
-
-html, body {
-  margin: 0;
-  padding: 0;
+/* Matrix Page Container - Scoped Theme */
+.matrix-page {
   background-color: var(--matrix-black);
   color: var(--matrix-green);
   font-family: var(--terminal-font);
+  min-height: 100vh;
 }
 
-body {
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-
-#root {
-  max-width: none;
-  margin: 0;
-  padding: 0;
-  text-align: left;
-  background-color: var(--matrix-black);
-  min-height: 100vh;
+.matrix-page * {
+  box-sizing: border-box;
 }
 
 /* CRT Scanline Effect */
@@ -227,22 +212,22 @@ body {
   50% { opacity: 0.5; }
 }
 
-/* Scrollbar Styling */
-::-webkit-scrollbar {
+/* Scrollbar Styling - Scoped to matrix-page */
+.matrix-page ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-::-webkit-scrollbar-track {
+.matrix-page ::-webkit-scrollbar-track {
   background: var(--matrix-black);
 }
 
-::-webkit-scrollbar-thumb {
+.matrix-page ::-webkit-scrollbar-thumb {
   background: var(--matrix-green-dim);
   border: 1px solid var(--matrix-green);
 }
 
-::-webkit-scrollbar-thumb:hover {
+.matrix-page ::-webkit-scrollbar-thumb:hover {
   background: var(--matrix-green);
 }
 
@@ -252,8 +237,8 @@ body {
   background-color: rgba(0, 59, 0, 0.2);
 }
 
-/* Selection Styling */
-::selection {
+/* Selection Styling - Scoped to matrix-page */
+.matrix-page ::selection {
   background-color: var(--matrix-green);
   color: var(--matrix-black);
 }
