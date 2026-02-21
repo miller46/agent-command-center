@@ -206,7 +206,14 @@ export const listAgents = async (): Promise<AgentSummary[]> => {
   const entries = await fs.readdir(AGENTS_ROOT, { withFileTypes: true });
   const ids = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
   const details = await Promise.all(ids.map((id) => mapAgent(id)));
-  return details.map(({ identity: _identity, sessions: _sessions, ...summary }) => summary);
+  return details.map((detail) => ({
+    id: detail.id,
+    name: detail.name,
+    type: detail.type,
+    status: detail.status,
+    description: detail.description,
+    lastActive: detail.lastActive,
+  }));
 };
 
 export const getAgentById = async (agentId: string): Promise<AgentDetail | null> => {

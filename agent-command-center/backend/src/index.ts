@@ -1,5 +1,5 @@
 import cors from "cors";
-import express, { type NextFunction, type Request, type Response } from "express";
+import express, { type Request, type Response } from "express";
 import morgan from "morgan";
 import agentRoutes from "./routes/agentRoutes.js";
 import { getAgentsRoot } from "./services/agentService.js";
@@ -26,7 +26,7 @@ app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });
 });
 
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+app.use((err: Error, _req: Request, res: Response) => {
   logError("Unhandled server error", err);
   res.status(500).json({ error: "Internal server error" });
 });
