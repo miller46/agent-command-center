@@ -28,3 +28,16 @@ export interface SessionMetadata {
   lastActive?: string;
   status: AgentStatus;
 }
+
+export interface AgentLogMessage {
+  role: string;
+  content: string;
+  timestamp: string | null;
+}
+
+export interface AgentLogsResponse {
+  isRunning: boolean;
+  lastActive: string | null;
+  sessionId: string | null;
+  recentMessages: AgentLogMessage[];
+}
