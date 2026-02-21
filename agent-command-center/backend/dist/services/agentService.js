@@ -158,4 +158,32 @@ export const getAgentSkill = async (agentId, skillName) => {
         throw error;
     }
 };
+export const getAgentUsageStats = async (agentId) => {
+    const profilesPath = path.join(AGENTS_ROOT, agentId, "agent", "auth-profiles.json");
+    let content;
+    try {
+        content = await fs.readFile(profilesPath, "utf8");
+    }
+    catch (error) {
+        if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+            return {};
+        }
+        throw error;
+    }
+    const parsed = safeJsonParse(content);
+    if (!parsed || typeof parsed !== "object") {
+        return {};
+    }
+    const profiles = "profiles" in parsed && parsed.profiles && typeof parsed.profiles === "object"
+        ? parsed.profiles
+        : {};
+    const usageStats = {};
+    for (const [profileName, profileValue] of Object.entries(profiles)) {
+        if (!profileValue || typeof profileValue !== "object" || !('usageStats' in profileValue)) {
+            continue;
+        }
+        usageStats[profileName] = profileValue.usageStats;
+    }
+    return usageStats;
+};
 export const getAgentsRoot = () => AGENTS_ROOT;

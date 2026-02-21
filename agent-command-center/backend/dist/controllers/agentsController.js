@@ -62,3 +62,19 @@ export const getAgentSkillByName = async (req, res) => {
         res.status(500).json({ error: "Failed to load agent skill" });
     }
 };
+export const getAgentUsage = async (req, res) => {
+    try {
+        const agentId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+        const agent = await getAgentById(agentId);
+        if (!agent) {
+            res.status(404).json({ error: "Agent not found" });
+            return;
+        }
+        const usageStats = await getAgentUsageStats(agentId);
+        res.json(usageStats);
+    }
+    catch (error) {
+        logError(`Failed to load usage stats for agent ${String(req.params.id)}`, error);
+        res.status(500).json({ error: "Failed to load usage stats" });
+    }
+};
