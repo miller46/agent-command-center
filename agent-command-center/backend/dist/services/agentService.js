@@ -3,7 +3,9 @@ import path from "node:path";
 import os from "node:os";
 const OPENCLAW_ROOT = path.join(os.homedir(), ".openclaw");
 const AGENTS_ROOT = path.join(OPENCLAW_ROOT, "agents");
+const AGENT_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 const isAgentStatus = (value) => value === "idle" || value === "busy" || value === "error";
+const isSafeAgentId = (agentId) => AGENT_ID_PATTERN.test(agentId);
 const safeJsonParse = (input) => {
     try {
         return JSON.parse(input);
@@ -128,6 +130,9 @@ export const getAgentById = async (agentId) => {
     return mapAgent(agentId);
 };
 export const listAgentSkills = async (agentId) => {
+    if (!isSafeAgentId(agentId)) {
+        return [];
+    }
     const skillsRoot = path.join(OPENCLAW_ROOT, `workspace-${agentId}`, "skills");
     try {
         const entries = await fs.readdir(skillsRoot, { withFileTypes: true });
@@ -141,6 +146,9 @@ export const listAgentSkills = async (agentId) => {
     }
 };
 export const getAgentSkill = async (agentId, skillName) => {
+    if (!isSafeAgentId(agentId)) {
+        return null;
+    }
     const skillsRoot = path.join(OPENCLAW_ROOT, `workspace-${agentId}`, "skills");
     const resolvedSkillPath = path.resolve(skillsRoot, skillName);
     if (!resolvedSkillPath.startsWith(path.resolve(skillsRoot) + path.sep)) {
