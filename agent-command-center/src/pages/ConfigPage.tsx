@@ -3,18 +3,18 @@ import { Settings, Bell, Globe, Database, Cpu } from 'lucide-react';
 
 export const ConfigPage: React.FC = () => {
   return (
-    <div className="p-6">
+    <div className="p-6 font-terminal">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">Configuration</h1>
-        <p className="text-slate-600">Configure system settings and preferences</p>
+        <h1 className="text-2xl font-bold text-matrix mb-2">Configuration</h1>
+        <p className="text-matrix-dim">Configure system settings and preferences</p>
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-8">
-        <div className="flex items-center gap-3 text-blue-800">
+      <div className="bg-matrix-dark border border-matrix rounded p-4 mb-8">
+        <div className="flex items-center gap-3 text-matrix">
           <Settings size={20} />
           <span className="font-medium">Configuration Section</span>
         </div>
-        <p className="text-blue-700 mt-2 text-sm">
+        <p className="text-matrix-dim mt-2 text-sm">
           This section is under development. System configuration options coming soon.
         </p>
       </div>
@@ -27,12 +27,12 @@ export const ConfigPage: React.FC = () => {
           { title: 'Database', icon: Database, description: 'Database connection settings' },
           { title: 'System Resources', icon: Cpu, description: 'CPU and memory allocation' },
         ].map((item) => (
-          <div key={item.title} className="bg-white rounded-xl border border-slate-200 p-6 opacity-60">
-            <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center mb-4">
-              <item.icon className="text-slate-400" size={24} />
+          <div key={item.title} className="bg-matrix-dark border border-matrix-dim rounded p-6 opacity-60">
+            <div className="w-12 h-12 bg-black border border-matrix-dim rounded flex items-center justify-center mb-4">
+              <item.icon className="text-matrix-dim" size={24} />
             </div>
-            <h3 className="font-semibold text-slate-900 mb-2">{item.title}</h3>
-            <p className="text-slate-600 text-sm">{item.description}</p>
+            <h3 className="font-semibold text-matrix mb-2">{item.title}</h3>
+            <p className="text-matrix-dim text-sm">{item.description}</p>
           </div>
         ))}
       </div>

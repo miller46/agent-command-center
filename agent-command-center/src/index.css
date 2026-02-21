@@ -1,1 +1,46 @@
 @import "tailwindcss";
+
+/* Matrix Theme Custom Properties */
+:root {
+  --matrix-black: #000000;
+  --matrix-green: #00FF41;
+  --matrix-green-dim: #008F11;
+  --matrix-green-dark: #003B00;
+  --matrix-green-glow: rgba(0, 255, 65, 0.5);
+}
+
+/* Base Matrix Theme Styles */
+html, body, #root {
+  background-color: var(--matrix-black);
+  color: var(--matrix-green);
+  font-family: 'Courier New', Courier, monospace;
+  min-height: 100vh;
+}
+
+/* Custom utility classes for Matrix theme */
+@layer utilities {
+  .bg-matrix {
+    background-color: var(--matrix-black);
+  }
+  .bg-matrix-dark {
+    background-color: var(--matrix-green-dark);
+  }
+  .text-matrix {
+    color: var(--matrix-green);
+  }
+  .text-matrix-dim {
+    color: var(--matrix-green-dim);
+  }
+  .border-matrix {
+    border-color: var(--matrix-green);
+  }
+  .border-matrix-dim {
+    border-color: var(--matrix-green-dim);
+  }
+  .glow-matrix {
+    box-shadow: 0 0 10px var(--matrix-green-glow);
+  }
+  .font-terminal {
+    font-family: 'Courier New', Courier, monospace;
+  }
+}

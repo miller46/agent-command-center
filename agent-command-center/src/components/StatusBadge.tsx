@@ -7,9 +7,9 @@ interface StatusBadgeProps {
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   const styles = {
-    idle: 'bg-green-100 text-green-800 border-green-200',
-    busy: 'bg-amber-100 text-amber-800 border-amber-200',
-    error: 'bg-red-100 text-red-800 border-red-200',
+    idle: 'bg-black text-matrix border-matrix',
+    busy: 'bg-black text-amber-500 border-amber-500',
+    error: 'bg-black text-red-500 border-red-500',
   };
 
   const labels = {
@@ -19,7 +19,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   };
 
   return (
-    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${styles[status]}`}>
+    <span className={`px-3 py-1 rounded text-xs font-medium border font-terminal ${styles[status]}`}>
       {labels[status]}
     </span>
   );
