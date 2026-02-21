@@ -1,4 +1,4 @@
-import { getAgentById, getAgentSkill, listAgentSkills, listAgents } from "../services/agentService.js";
+import { getAgentById, getAgentLogs, getAgentSkill, getAgentUsageStats, listAgentSkills, listAgents } from "../services/agentService.js";
 import { logError } from "../utils/logger.js";
 export const getAgents = async (_req, res) => {
     try {
@@ -60,6 +60,22 @@ export const getAgentSkillByName = async (req, res) => {
     catch (error) {
         logError(`Failed to load skill ${String(req.params.skillName)} for agent ${String(req.params.id)}`, error);
         res.status(500).json({ error: "Failed to load agent skill" });
+    }
+};
+export const getAgentSessionLogs = async (req, res) => {
+    try {
+        const agentId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+        const agent = await getAgentById(agentId);
+        if (!agent) {
+            res.status(404).json({ error: "Agent not found" });
+            return;
+        }
+        const logs = await getAgentLogs(agentId);
+        res.json(logs);
+    }
+    catch (error) {
+        logError(`Failed to load logs for agent ${String(req.params.id)}`, error);
+        res.status(500).json({ error: "Failed to load agent logs" });
     }
 };
 export const getAgentUsage = async (req, res) => {
