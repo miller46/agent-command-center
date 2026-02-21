@@ -1,8 +1,13 @@
 # Agent Command Center
 
-Frontend dashboard (Vite + React) with a local backend API (Express + TypeScript) for reading OpenClaw agent data.
+A local dashboard for managing OpenClaw agents. Frontend dashboard (Vite + React) with a local backend API (Express + TypeScript) for reading OpenClaw agent data.
 
-## Backend API (Issue #3)
+## Prerequisites
+
+- [Node.js](https://nodejs.org/) (v18 or later recommended)
+- [npm](https://www.npmjs.com/)
+
+## Backend API
 
 The backend server reads agents from:
 
@@ -46,7 +51,8 @@ Backend:
 npm run backend:dev
 ```
 
-Backend will be available at `http://localhost:3001`.
+Frontend will be available at http://localhost:5173  
+Backend will be available at http://localhost:3001
 
 ## Build backend
 
