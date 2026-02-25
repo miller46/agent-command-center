@@ -307,3 +307,25 @@
     linear-gradient(90deg, rgba(0, 255, 65, 0.03) 1px, transparent 1px);
   background-size: 20px 20px;
 }
+
+/* Skills Display Styles */
+.skill-card {
+  transition: all 0.3s ease;
+}
+
+.skill-card:hover {
+  border-color: var(--matrix-green);
+}
+
+.skills-display .line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.skills-display .truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
