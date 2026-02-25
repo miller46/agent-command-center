@@ -1,6 +1,9 @@
 # Agent Command Center
 
+<img src="public/agents.png" />
+
 A local dashboard for managing OpenClaw agents. Frontend dashboard (Vite + React) with a local backend API (Express + TypeScript) for reading OpenClaw agent data.
+
 
 ## Prerequisites
 
