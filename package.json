@@ -11,7 +11,7 @@
     "backend:dev": "tsx watch backend/src/index.ts",
     "backend:build": "tsc -p backend/tsconfig.json",
     "backend:start": "node backend/dist/index.js",
-    "backend:test": "tsx --test backend/src/**/*.test.ts"
+    "backend:test": "node --test --import tsx backend/src/**/*.test.ts"
   },
   "dependencies": {
     "cors": "^2.8.6",
