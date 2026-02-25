@@ -28,3 +28,23 @@ export interface SessionMetadata {
   lastActive?: string;
   status: AgentStatus;
 }
+
+export type RunStatus = AgentStatus;
+
+export interface AgentRun {
+  id: string;
+  agent: string;
+  started_at?: string;
+  completed_at?: string;
+  status: RunStatus;
+  logs: string;
+}
+
+export interface AgentRunsQuery {
+  agent?: string;
+  from?: string;
+  to?: string;
+  status?: RunStatus;
+  limit: number;
+  offset: number;
+}

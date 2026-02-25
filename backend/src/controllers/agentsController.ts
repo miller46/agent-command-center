@@ -1,5 +1,10 @@
 import type { Request, Response } from "express";
-import { getAgentById, listAgents } from "../services/agentService.js";
+import {
+  getAgentById,
+  listAgentRuns,
+  listAgents,
+  parseRunsQuery,
+} from "../services/agentService.js";
 import { logError } from "../utils/logger.js";
 
 export const getAgents = async (_req: Request, res: Response): Promise<void> => {
@@ -26,5 +31,26 @@ export const getAgent = async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     logError(`Failed to load agent ${String(req.params.id)}`, error);
     res.status(500).json({ error: "Failed to load agent" });
+  }
+};
+
+export const getAgentRuns = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const query = parseRunsQuery(req.query as Record<string, unknown>);
+
+    if (!query.valid) {
+      res.status(400).json({ error: query.error });
+      return;
+    }
+
+    const result = await listAgentRuns(query.value);
+    res.json({
+      data: result.data,
+      pagination: result.pagination,
+      filters: result.filters,
+    });
+  } catch (error) {
+    logError("Failed to load agent runs", error);
+    res.status(500).json({ error: "Failed to load agent runs" });
   }
 };
