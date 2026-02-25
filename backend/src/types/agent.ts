@@ -28,3 +28,9 @@ export interface SessionMetadata {
   lastActive?: string;
   status: AgentStatus;
 }
+
+export interface AgentSkill {
+  name: string;
+  path: string;
+  attributes: Record<string, unknown>;
+}

@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { getAgentById, listAgents } from "../services/agentService.js";
+import { getAgentById, listAgentSkills, listAgents } from "../services/agentService.js";
 import { logError } from "../utils/logger.js";
 
 export const getAgents = async (_req: Request, res: Response): Promise<void> => {
@@ -26,5 +26,25 @@ export const getAgent = async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     logError(`Failed to load agent ${String(req.params.id)}`, error);
     res.status(500).json({ error: "Failed to load agent" });
+  }
+};
+
+export const getAgentSkills = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const agentId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const nameQuery = req.query.name;
+    const skillNameFilter = Array.isArray(nameQuery) ? nameQuery[0] : nameQuery;
+
+    const skills = await listAgentSkills(
+      agentId,
+      typeof skillNameFilter === "string" && skillNameFilter.length > 0
+        ? skillNameFilter
+        : undefined,
+    );
+
+    res.json({ data: skills });
+  } catch (error) {
+    logError(`Failed to load skills for agent ${String(req.params.id)}`, error);
+    res.status(500).json({ error: "Failed to load agent skills" });
   }
 };
