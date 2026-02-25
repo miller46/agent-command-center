@@ -29,6 +29,12 @@ export interface SessionMetadata {
   status: AgentStatus;
 }
 
+export interface AgentSkill {
+  name: string;
+  path: string;
+  attributes: Record<string, unknown>;
+}
+
 export type RunStatus = AgentStatus;
 
 export interface AgentRun {
