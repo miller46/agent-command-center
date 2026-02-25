@@ -2,12 +2,15 @@ import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { mockAgents } from '../data/mockAgents';
 import { StatusBadge } from '../components/StatusBadge';
+import { SkillsDisplay } from '../components/SkillsDisplay';
+import { useSkills } from '../hooks/useSkills';
 import { ArrowLeft, Clock, Activity, Settings, Play, Pause, RotateCcw } from 'lucide-react';
 
 export const AgentDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const agent = mockAgents.find(a => a.id === id);
+  const { skills, loading, error, refetch } = useSkills(id);
 
   if (!agent) {
     return (
@@ -112,6 +115,17 @@ export const AgentDetailPage: React.FC = () => {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Skills Section */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6">
+            <SkillsDisplay
+              agentId={id || ''}
+              skills={skills}
+              loading={loading}
+              error={error}
+              onRetry={refetch}
+            />
           </div>
         </div>
 
