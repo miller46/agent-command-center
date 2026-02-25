@@ -7,21 +7,9 @@ import { AgentListPage } from './pages/AgentListPage';
 import { AgentDetailPage } from './pages/AgentDetailPage';
 import { AdminPage } from './pages/AdminPage';
 import { ConfigPage } from './pages/ConfigPage';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const location = useLocation();
-  const isAgentListPage = location.pathname === '/agents';
-
-  if (isAgentListPage) {
-    // Agent List page has its own full Matrix theme layout
-    return (
-      <div className="matrix-page">
-        {children}
-      </div>
-    );
-  }
-
   return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar />
