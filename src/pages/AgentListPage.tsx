@@ -1,18 +1,34 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AgentCard } from '../components/AgentCard';
-import { mockAgents } from '../data/mockAgents';
+import type { Agent } from '../types/agent';
 import { Plus, Bot, Activity, AlertCircle, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const AgentListPage: React.FC = () => {
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/agents')
+      .then(res => res.json())
+      .then(data => {
+        setAgents(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setAgents([]);
+        setLoading(false);
+      });
+  }, []);
+
   const statusCounts = {
-    idle: mockAgents.filter(a => a.status === 'idle').length,
-    busy: mockAgents.filter(a => a.status === 'busy').length,
-    error: mockAgents.filter(a => a.status === 'error').length,
+    idle: agents.filter(a => a.status === 'idle').length,
+    busy: agents.filter(a => a.status === 'busy').length,
+    error: agents.filter(a => a.status === 'error').length,
   };
 
   const stats = [
-    { label: 'Total Agents', value: mockAgents.length, icon: Bot, color: 'blue' as const },
+    { label: 'Total Agents', value: agents.length, icon: Bot, color: 'blue' as const },
     { label: 'Active Now', value: statusCounts.busy, icon: Activity, color: 'green' as const },
     { label: 'Idle', value: statusCounts.idle, icon: CheckCircle, color: 'purple' as const },
     { label: 'Errors', value: statusCounts.error, icon: AlertCircle, color: 'red' as const },
@@ -51,7 +67,9 @@ export const AgentListPage: React.FC = () => {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-slate-500 mb-1">{stat.label}</p>
-                <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
+                <p className="text-3xl font-bold text-slate-900">
+                  {loading ? '-' : stat.value}
+                </p>
               </div>
               <div className={`w-12 h-12 ${statColorClasses[stat.color].bg} rounded-lg flex items-center justify-center`}>
                 <stat.icon className={statColorClasses[stat.color].text} size={24} />
@@ -66,15 +84,21 @@ export const AgentListPage: React.FC = () => {
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold text-slate-900">All Agents</h2>
           <p className="text-sm text-slate-500">
-            Showing {mockAgents.length} agent{mockAgents.length !== 1 && 's'}
+            Showing {agents.length} agent{agents.length !== 1 && 's'}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {mockAgents.map((agent) => (
-            <AgentCard key={agent.id} agent={agent} />
-          ))}
-        </div>
+        {loading ? (
+          <p className="text-slate-500">Loading...</p>
+        ) : agents.length === 0 ? (
+          <p className="text-slate-500">No agents found</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {agents.map((agent) => (
+              <AgentCard key={agent.id} agent={agent} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
