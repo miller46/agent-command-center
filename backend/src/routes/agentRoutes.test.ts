@@ -1,4 +1,5 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { after, before, describe, it } from "node:test";
+import assert from "node:assert/strict";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
@@ -14,7 +15,7 @@ const buildApp = () => {
   return app;
 };
 
-beforeAll(async () => {
+before(async () => {
   tempRoot = await mkdtemp(path.join(os.tmpdir(), "agent-routes-test-"));
 
   process.env.OPENCLAW_ROOT = tempRoot;
@@ -40,7 +41,7 @@ beforeAll(async () => {
   );
 });
 
-afterAll(async () => {
+after(async () => {
   delete process.env.OPENCLAW_ROOT;
   delete process.env.OPENCLAW_AGENTS_ROOT;
   if (tempRoot) {
@@ -52,20 +53,18 @@ describe("GET /api/v1/agents/:id/skills", () => {
   it("returns parsed skill metadata", async () => {
     const response = await request(buildApp()).get("/api/v1/agents/bravo/skills");
 
-    expect(response.status).toBe(200);
-    expect(Array.isArray(response.body.data)).toBe(true);
-    expect(response.body.data).toHaveLength(1);
-    expect(response.body.data[0]).toMatchObject({
-      name: "route-skill",
-      attributes: { description: "From route test" },
-    });
+    assert.equal(response.status, 200);
+    assert.equal(Array.isArray(response.body.data), true);
+    assert.equal(response.body.data.length, 1);
+    assert.equal(response.body.data[0].name, "route-skill");
+    assert.equal(response.body.data[0].attributes.description, "From route test");
   });
 
   it("supports name filtering", async () => {
     const response = await request(buildApp()).get("/api/v1/agents/bravo/skills?name=missing");
 
-    expect(response.status).toBe(200);
-    expect(response.body.data).toEqual([]);
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body.data, []);
   });
 });
 
@@ -73,24 +72,17 @@ describe("GET /api/v1/agents/runs", () => {
   it("returns run history with pagination", async () => {
     const response = await request(buildApp()).get("/api/v1/agents/runs?limit=10&offset=0");
 
-    expect(response.status).toBe(200);
-    expect(Array.isArray(response.body.data)).toBe(true);
-    expect(response.body.pagination.total).toBe(1);
-    expect(response.body.data[0]?.agent).toBe("gamma");
-    expect(typeof response.body.data[0]?.logs).toBe("string");
+    assert.equal(response.status, 200);
+    assert.equal(Array.isArray(response.body.data), true);
+    assert.equal(response.body.pagination.total, 1);
+    assert.equal(response.body.data[0].agent, "gamma");
+    assert.equal(typeof response.body.data[0].logs, "string");
   });
 
   it("validates bad query params", async () => {
     const response = await request(buildApp()).get("/api/v1/agents/runs?status=not-real");
 
-    expect(response.status).toBe(400);
-    expect(response.body.error).toMatch(/Invalid 'status'/);
-  });
-
-  it("validates malformed date filters", async () => {
-    const response = await request(buildApp()).get("/api/v1/agents/runs?from=not-a-date");
-
-    expect(response.status).toBe(400);
-    expect(response.body.error).toMatch(/Invalid 'from' date/);
+    assert.equal(response.status, 400);
+    assert.match(response.body.error, /Invalid 'status'/);
   });
 });

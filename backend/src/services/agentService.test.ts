@@ -1,4 +1,5 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { after, before, describe, it } from "node:test";
+import assert from "node:assert/strict";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
@@ -20,7 +21,7 @@ const writeSession = async (
   );
 };
 
-beforeAll(async () => {
+before(async () => {
   tempRoot = await mkdtemp(path.join(os.tmpdir(), "agent-service-test-"));
 
   process.env.OPENCLAW_ROOT = tempRoot;
@@ -69,7 +70,7 @@ beforeAll(async () => {
   ]);
 });
 
-afterAll(async () => {
+after(async () => {
   delete process.env.OPENCLAW_ROOT;
   delete process.env.OPENCLAW_AGENTS_ROOT;
   if (tempRoot) {
@@ -80,34 +81,39 @@ afterAll(async () => {
 describe("agentService skill parsing", () => {
   it("parses YAML frontmatter into attributes", () => {
     const parsed = parseSkillFrontmatter(`---\nname: alpha\nversion: 2\n---\n# Body`);
-    expect(parsed).toMatchObject({ name: "alpha", version: 2 });
+    assert.deepEqual(parsed, { name: "alpha", version: 2 });
   });
 
   it("returns empty object for invalid YAML", () => {
     const parsed = parseSkillFrontmatter(`---\nname: alpha\nlist: [x\n---\n# Body`);
-    expect(parsed).toEqual({});
+    assert.deepEqual(parsed, {});
   });
 
   it("lists skills and handles corrupt frontmatter gracefully", async () => {
     const skills = await listAgentSkills("alpha");
 
-    expect(skills).toHaveLength(3);
-    expect(skills.find((skill) => skill.name === "good-skill")?.attributes.description).toBe("Useful helper");
-    expect(skills.find((skill) => skill.name === "broken-skill")?.attributes).toEqual({});
+    assert.equal(skills.length, 3);
+    const good = skills.find((skill) => skill.name === "good-skill");
+    const broken = skills.find((skill) => skill.name === "broken-skill");
+
+    assert.ok(good);
+    assert.equal(good.attributes.description, "Useful helper");
+    assert.ok(broken);
+    assert.deepEqual(broken.attributes, {});
   });
 
   it("falls back to directory name when frontmatter name is missing", async () => {
     const skills = await listAgentSkills("alpha");
     const nameless = skills.find((skill) => skill.name === "nameless-skill");
 
-    expect(nameless).toBeTruthy();
-    expect(nameless?.attributes.description).toBe("Missing explicit name");
+    assert.ok(nameless);
+    assert.equal(nameless.attributes.description, "Missing explicit name");
   });
 
   it("supports exact skill-name filtering", async () => {
     const filtered = await listAgentSkills("alpha", "good-skill");
-    expect(filtered).toHaveLength(1);
-    expect(filtered[0]?.name).toBe("good-skill");
+    assert.equal(filtered.length, 1);
+    assert.equal(filtered[0].name, "good-skill");
   });
 });
 
@@ -122,7 +128,7 @@ describe("parseRunsQuery", () => {
       offset: "2",
     });
 
-    expect(result).toEqual({
+    assert.deepEqual(result, {
       valid: true,
       value: {
         agent: "alpha",
@@ -135,20 +141,20 @@ describe("parseRunsQuery", () => {
     });
   });
 
-  it("rejects invalid date, status, and range-boundary values", () => {
-    expect(parseRunsQuery({ from: "not-a-date" })).toEqual({ valid: false, error: "Invalid 'from' date" });
-    expect(parseRunsQuery({ to: "still-not-a-date" })).toEqual({ valid: false, error: "Invalid 'to' date" });
-    expect(parseRunsQuery({ status: "done" })).toEqual({
+  it("rejects invalid date, status, and limit boundary values", () => {
+    assert.deepEqual(parseRunsQuery({ from: "not-a-date" }), { valid: false, error: "Invalid 'from' date" });
+    assert.deepEqual(parseRunsQuery({ to: "still-not-a-date" }), { valid: false, error: "Invalid 'to' date" });
+    assert.deepEqual(parseRunsQuery({ status: "done" }), {
       valid: false,
       error: "Invalid 'status'. Must be one of: idle, busy, error",
     });
-    expect(parseRunsQuery({ limit: "0" })).toEqual({ valid: false, error: "Invalid 'limit'. Must be between 1 and 200" });
-    expect(parseRunsQuery({ limit: "201" })).toEqual({ valid: false, error: "Invalid 'limit'. Must be between 1 and 200" });
+    assert.deepEqual(parseRunsQuery({ limit: "0" }), { valid: false, error: "Invalid 'limit'. Must be between 1 and 200" });
+    assert.deepEqual(parseRunsQuery({ limit: "201" }), { valid: false, error: "Invalid 'limit'. Must be between 1 and 200" });
   });
 
   it("falls back to defaults for empty offset and limit", () => {
     const result = parseRunsQuery({ limit: "", offset: "" });
-    expect(result).toEqual({
+    assert.deepEqual(result, {
       valid: true,
       value: { agent: undefined, from: undefined, to: undefined, status: undefined, limit: 50, offset: 0 },
     });
@@ -156,7 +162,7 @@ describe("parseRunsQuery", () => {
 
   it("defaults offset when provided offset is invalid", () => {
     const result = parseRunsQuery({ offset: "-1" });
-    expect(result).toEqual({
+    assert.deepEqual(result, {
       valid: true,
       value: { agent: undefined, from: undefined, to: undefined, status: undefined, limit: 50, offset: 0 },
     });
@@ -164,35 +170,35 @@ describe("parseRunsQuery", () => {
 
   it("rejects out-of-range limit", () => {
     const result = parseRunsQuery({ limit: "999" });
-    expect(result.valid).toBe(false);
+    assert.equal(result.valid, false);
   });
 });
 
 describe("listAgentRuns", () => {
   it("returns paginated runs with metadata and logs", async () => {
     const query = parseRunsQuery({ limit: "2", offset: "0" });
-    expect(query.valid).toBe(true);
+    assert.equal(query.valid, true);
     if (!query.valid) return;
 
     const result = await listAgentRuns(query.value);
 
-    expect(result.pagination.total).toBe(4);
-    expect(result.data).toHaveLength(2);
-    expect(result.data[0]?.id).toBeTruthy();
-    expect(result.data[0]?.agent).toBeTruthy();
-    expect(typeof result.data[0]?.logs).toBe("string");
+    assert.equal(result.pagination.total, 4);
+    assert.equal(result.data.length, 2);
+    assert.ok(result.data[0].id);
+    assert.ok(result.data[0].agent);
+    assert.ok(typeof result.data[0].logs === "string");
   });
 
   it("filters by agent and status", async () => {
     const query = parseRunsQuery({ agent: "alpha", status: "error", limit: "50" });
-    expect(query.valid).toBe(true);
+    assert.equal(query.valid, true);
     if (!query.valid) return;
 
     const result = await listAgentRuns(query.value);
 
-    expect(result.data).toHaveLength(1);
-    expect(result.data[0]?.agent).toBe("alpha");
-    expect(result.data[0]?.status).toBe("error");
+    assert.equal(result.data.length, 1);
+    assert.equal(result.data[0].agent, "alpha");
+    assert.equal(result.data[0].status, "error");
   });
 
   it("applies inclusive time filters and truncates oversized logs", async () => {
@@ -201,21 +207,21 @@ describe("listAgentRuns", () => {
       to: "2026-02-22T09:00:00.000Z",
       limit: "50",
     });
-    expect(boundaryQuery.valid).toBe(true);
+    assert.equal(boundaryQuery.valid, true);
     if (!boundaryQuery.valid) return;
 
     const boundaryResult = await listAgentRuns(boundaryQuery.value);
-    expect(boundaryResult.data).toHaveLength(1);
-    expect(boundaryResult.data[0]?.agent).toBe("beta");
+    assert.equal(boundaryResult.data.length, 1);
+    assert.equal(boundaryResult.data[0].agent, "beta");
 
     const longLogQuery = parseRunsQuery({ agent: "beta", limit: "5" });
-    expect(longLogQuery.valid).toBe(true);
+    assert.equal(longLogQuery.valid, true);
     if (!longLogQuery.valid) return;
 
     const longLogResult = await listAgentRuns(longLogQuery.value);
     const longRun = longLogResult.data.find((run) => run.id.endsWith("run-2.jsonl"));
 
-    expect(longRun).toBeTruthy();
-    expect(longRun?.logs.endsWith("...[truncated]")).toBe(true);
+    assert.ok(longRun);
+    assert.match(longRun.logs, /\.\.\.\[truncated\]$/);
   });
 });
