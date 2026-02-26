@@ -34,18 +34,12 @@ describe('useSkills', () => {
           },
         ],
       };
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockSkillData,
-      });
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => mockSkillData });
 
       const { result } = renderHook(() => useSkills('agent-1'));
-
       expect(result.current.loading).toBe(true);
 
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       expect(result.current.skills).toEqual(mockSkillData.data);
       expect(result.current.error).toBeNull();
@@ -53,32 +47,20 @@ describe('useSkills', () => {
     });
 
     it('defaults to empty skills when response has no data array', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ meta: { source: 'test' } }),
-      });
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ meta: { source: 'test' } }) });
 
       const { result } = renderHook(() => useSkills('agent-1'));
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       expect(result.current.skills).toEqual([]);
       expect(result.current.error).toBeNull();
     });
 
     it('handles API error responses', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        statusText: 'Not Found',
-      });
+      mockFetch.mockResolvedValueOnce({ ok: false, statusText: 'Not Found' });
 
       const { result } = renderHook(() => useSkills('agent-1'));
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       expect(result.current.skills).toEqual([]);
       expect(result.current.error).toBe('Failed to fetch skills: Not Found');
@@ -88,10 +70,7 @@ describe('useSkills', () => {
       mockFetch.mockRejectedValueOnce('network-down');
 
       const { result } = renderHook(() => useSkills('agent-1'));
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       expect(result.current.skills).toEqual([]);
       expect(result.current.error).toBe('Unknown error occurred');
@@ -101,25 +80,14 @@ describe('useSkills', () => {
       const mockSkillData = {
         data: [{ name: 'test-skill', description: 'Test description', attributes: {} }],
       };
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => mockSkillData,
-      });
+      mockFetch.mockResolvedValue({ ok: true, json: async () => mockSkillData });
 
       const { result } = renderHook(() => useSkills('agent-1'));
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
+      await waitFor(() => expect(result.current.loading).toBe(false));
       expect(mockFetch).toHaveBeenCalledTimes(1);
 
-      act(() => {
-        result.current.refetch();
-      });
-
-      await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledTimes(2);
-      });
+      act(() => result.current.refetch());
+      await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2));
 
       expect(result.current.skills).toEqual(mockSkillData.data);
     });
@@ -129,25 +97,17 @@ describe('useSkills', () => {
         data: [{ name: 'test-skill', description: 'Test description', attributes: {} }],
       };
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockSkillData,
-      });
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => mockSkillData });
 
       const { result, rerender } = renderHook(({ agentId }) => useSkills(agentId), {
         initialProps: { agentId: 'agent-1' as string | undefined },
       });
 
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
+      await waitFor(() => expect(result.current.loading).toBe(false));
       expect(result.current.skills).toEqual(mockSkillData.data);
 
       rerender({ agentId: undefined });
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       expect(result.current.skills).toEqual([]);
       expect(result.current.error).toBeNull();
@@ -160,10 +120,7 @@ describe('useSkills', () => {
       const mockSkillData = {
         data: [{ name: 'test-skill', description: 'Test description', attributes: {} }],
       };
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockSkillData,
-      });
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => mockSkillData });
 
       const result = await fetchSkillsByAgentId('agent-1');
 
@@ -172,21 +129,14 @@ describe('useSkills', () => {
     });
 
     it('returns empty list when response has no data field', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ foo: 'bar' }),
-      });
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ foo: 'bar' }) });
 
       const result = await fetchSkillsByAgentId('agent-1');
-
       expect(result).toEqual([]);
     });
 
     it('throws on error response', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        statusText: 'Server Error',
-      });
+      mockFetch.mockResolvedValueOnce({ ok: false, statusText: 'Server Error' });
 
       await expect(fetchSkillsByAgentId('agent-1')).rejects.toThrow('Failed to fetch skills: Server Error');
     });

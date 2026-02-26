@@ -64,9 +64,8 @@ beforeAll(async () => {
     { timestamp: "2026-02-22T09:05:00.000Z", message: "still running", status: "busy" },
   ]);
 
-  const longMessage = "x".repeat(9000);
-  await writeSession("gamma", "run-1.jsonl", [
-    { timestamp: "2026-02-22T11:00:00.000Z", message: longMessage, status: "busy" },
+  await writeSession("beta", "run-2.jsonl", [
+    { timestamp: "2026-02-22T10:00:00.000Z", message: "x".repeat(9000), status: "idle" },
   ]);
 });
 
@@ -162,6 +161,11 @@ describe("parseRunsQuery", () => {
       value: { agent: undefined, from: undefined, to: undefined, status: undefined, limit: 50, offset: 0 },
     });
   });
+
+  it("rejects out-of-range limit", () => {
+    const result = parseRunsQuery({ limit: "999" });
+    expect(result.valid).toBe(false);
+  });
 });
 
 describe("listAgentRuns", () => {
@@ -204,11 +208,14 @@ describe("listAgentRuns", () => {
     expect(boundaryResult.data).toHaveLength(1);
     expect(boundaryResult.data[0]?.agent).toBe("beta");
 
-    const longLogQuery = parseRunsQuery({ agent: "gamma", limit: "5" });
+    const longLogQuery = parseRunsQuery({ agent: "beta", limit: "5" });
     expect(longLogQuery.valid).toBe(true);
     if (!longLogQuery.valid) return;
 
     const longLogResult = await listAgentRuns(longLogQuery.value);
-    expect(longLogResult.data[0]?.logs.endsWith("...[truncated]")).toBe(true);
+    const longRun = longLogResult.data.find((run) => run.id.endsWith("run-2.jsonl"));
+
+    expect(longRun).toBeTruthy();
+    expect(longRun?.logs.endsWith("...[truncated]")).toBe(true);
   });
 });

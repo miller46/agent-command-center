@@ -38,6 +38,7 @@ describe('SkillsDisplay', () => {
     render(<SkillsDisplay agentId="agent-1" skills={[]} loading={true} error={null} />);
 
     expect(screen.getByText('CAPABILITIES')).toBeInTheDocument();
+    expect(screen.getAllByTestId('wrench-icon')).toHaveLength(1);
     expect(document.querySelectorAll('.animate-pulse')).toHaveLength(3);
   });
 
@@ -109,6 +110,9 @@ describe('SkillsDisplay', () => {
     expect(screen.getByText('Attributes')).toBeInTheDocument();
 
     fireEvent.keyDown(skillHeader, { key: ' ' });
+    expect(screen.queryByText('Attributes')).not.toBeInTheDocument();
+
+    fireEvent.keyDown(skillHeader, { key: 'Escape' });
     expect(screen.queryByText('Attributes')).not.toBeInTheDocument();
   });
 
