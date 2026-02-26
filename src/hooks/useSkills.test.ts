@@ -51,6 +51,22 @@ describe('useSkills', () => {
       expect(mockFetch).toHaveBeenCalledWith('/api/v1/agents/agent-1/skills');
     });
 
+    it('defaults to empty skills when response has no data array', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ meta: { source: 'test' } }),
+      });
+
+      const { result } = renderHook(() => useSkills('agent-1'));
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.skills).toEqual([]);
+      expect(result.current.error).toBeNull();
+    });
+
     it('handles API error responses', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
@@ -68,7 +84,7 @@ describe('useSkills', () => {
     });
 
     it('handles network failures with fallback message', async () => {
-      mockFetch.mockRejectedValueOnce('network-failure');
+      mockFetch.mockRejectedValueOnce('network-down');
 
       const { result } = renderHook(() => useSkills('agent-1'));
 

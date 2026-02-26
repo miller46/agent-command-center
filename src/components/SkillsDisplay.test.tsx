@@ -84,10 +84,18 @@ describe('SkillsDisplay', () => {
     expect(screen.getByText('API-DESIGN')).toBeInTheDocument();
   });
 
-  it('renders singular count for a single skill', () => {
-    render(<SkillsDisplay agentId="agent-1" skills={[mockSkills[0]]} loading={false} error={null} />);
+  it('expands skill card when clicked', () => {
+    render(<SkillsDisplay agentId="agent-1" skills={mockSkills} loading={false} error={null} />);
 
-    expect(screen.getByText('1 SKILL')).toBeInTheDocument();
+    const skillHeader = screen.getByText('CODE-REVIEW').closest('[role="button"]');
+    expect(skillHeader).toBeInTheDocument();
+
+    if (skillHeader) {
+      fireEvent.click(skillHeader);
+    }
+
+    expect(screen.getByText('Attributes')).toBeInTheDocument();
+    expect(screen.getByText('language')).toBeInTheDocument();
   });
 
   it('expands and collapses skill card with keyboard interactions', () => {
