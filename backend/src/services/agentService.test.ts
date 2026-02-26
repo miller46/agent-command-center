@@ -101,6 +101,20 @@ describe("agentService skill parsing", () => {
     assert.equal(filtered.length, 1);
     assert.equal(filtered[0].name, "good-skill");
   });
+
+  it("falls back to directory name when frontmatter name is missing", async () => {
+    const skillsRoot = path.join(tempRoot, "workspace-alpha", "skills", "nameless");
+    await mkdir(skillsRoot, { recursive: true });
+    await writeFile(
+      path.join(skillsRoot, "SKILL.md"),
+      `---\ndescription: no name in frontmatter\n---\n\n# Nameless\n`,
+      "utf8",
+    );
+
+    const skills = await listAgentSkills("alpha", "nameless");
+    assert.equal(skills.length, 1);
+    assert.equal(skills[0].name, "nameless");
+  });
 });
 
 describe("parseRunsQuery", () => {
@@ -130,6 +144,18 @@ describe("parseRunsQuery", () => {
   it("rejects invalid status", () => {
     const result = parseRunsQuery({ status: "done" });
     assert.equal(result.valid, false);
+  });
+
+  it("rejects out-of-range limit", () => {
+    const result = parseRunsQuery({ limit: "999" });
+    assert.equal(result.valid, false);
+  });
+
+  it("defaults offset when provided offset is invalid", () => {
+    const result = parseRunsQuery({ offset: "-1" });
+    assert.equal(result.valid, true);
+    if (!result.valid) return;
+    assert.equal(result.value.offset, 0);
   });
 });
 
