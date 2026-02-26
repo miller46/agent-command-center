@@ -15,12 +15,13 @@ describe('useSkills', () => {
   });
 
   describe('useSkills hook', () => {
-    it('initializes with empty state when no agentId is provided', () => {
+    it('initializes to idle state and skips fetch when no agentId is provided', () => {
       const { result } = renderHook(() => useSkills(undefined));
 
       expect(result.current.skills).toEqual([]);
       expect(result.current.loading).toBe(false);
       expect(result.current.error).toBeNull();
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
     it('fetches skills successfully', async () => {

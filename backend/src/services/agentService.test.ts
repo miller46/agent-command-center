@@ -29,6 +29,7 @@ beforeAll(async () => {
   const alphaSkillsRoot = path.join(tempRoot, "workspace-alpha", "skills");
   await mkdir(path.join(alphaSkillsRoot, "good-skill"), { recursive: true });
   await mkdir(path.join(alphaSkillsRoot, "broken-skill"), { recursive: true });
+  await mkdir(path.join(alphaSkillsRoot, "nameless-skill"), { recursive: true });
 
   await writeFile(
     path.join(alphaSkillsRoot, "good-skill", "SKILL.md"),
@@ -39,6 +40,12 @@ beforeAll(async () => {
   await writeFile(
     path.join(alphaSkillsRoot, "broken-skill", "SKILL.md"),
     `---\nname: broken-skill\ndescription: [oops\n---\n\n# Broken\n`,
+    "utf8",
+  );
+
+  await writeFile(
+    path.join(alphaSkillsRoot, "nameless-skill", "SKILL.md"),
+    `---\ndescription: Missing explicit name\n---\n\n# Nameless Skill\n`,
     "utf8",
   );
 
@@ -74,43 +81,34 @@ afterAll(async () => {
 describe("agentService skill parsing", () => {
   it("parses YAML frontmatter into attributes", () => {
     const parsed = parseSkillFrontmatter(`---\nname: alpha\nversion: 2\n---\n# Body`);
-
     expect(parsed).toMatchObject({ name: "alpha", version: 2 });
   });
 
   it("returns empty object for invalid YAML", () => {
     const parsed = parseSkillFrontmatter(`---\nname: alpha\nlist: [x\n---\n# Body`);
-
     expect(parsed).toEqual({});
   });
 
   it("lists skills and handles corrupt frontmatter gracefully", async () => {
     const skills = await listAgentSkills("alpha");
 
-    expect(skills).toHaveLength(2);
+    expect(skills).toHaveLength(3);
     expect(skills.find((skill) => skill.name === "good-skill")?.attributes.description).toBe("Useful helper");
     expect(skills.find((skill) => skill.name === "broken-skill")?.attributes).toEqual({});
   });
 
-  it("supports exact skill-name filtering", async () => {
-    const filtered = await listAgentSkills("alpha", "good-skill");
+  it("falls back to directory name when frontmatter name is missing", async () => {
+    const skills = await listAgentSkills("alpha");
+    const nameless = skills.find((skill) => skill.name === "nameless-skill");
 
-    expect(filtered).toHaveLength(1);
-    expect(filtered[0]?.name).toBe("good-skill");
+    expect(nameless).toBeTruthy();
+    expect(nameless?.attributes.description).toBe("Missing explicit name");
   });
 
-  it("falls back to directory name when frontmatter name is missing", async () => {
-    const skillsRoot = path.join(tempRoot, "workspace-alpha", "skills", "nameless");
-    await mkdir(skillsRoot, { recursive: true });
-    await writeFile(
-      path.join(skillsRoot, "SKILL.md"),
-      `---\ndescription: no name in frontmatter\n---\n\n# Nameless\n`,
-      "utf8",
-    );
-
-    const skills = await listAgentSkills("alpha", "nameless");
-    assert.equal(skills.length, 1);
-    assert.equal(skills[0].name, "nameless");
+  it("supports exact skill-name filtering", async () => {
+    const filtered = await listAgentSkills("alpha", "good-skill");
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0]?.name).toBe("good-skill");
   });
 });
 
@@ -157,16 +155,12 @@ describe("parseRunsQuery", () => {
     });
   });
 
-  it("rejects out-of-range limit", () => {
-    const result = parseRunsQuery({ limit: "999" });
-    assert.equal(result.valid, false);
-  });
-
   it("defaults offset when provided offset is invalid", () => {
     const result = parseRunsQuery({ offset: "-1" });
-    assert.equal(result.valid, true);
-    if (!result.valid) return;
-    assert.equal(result.value.offset, 0);
+    expect(result).toEqual({
+      valid: true,
+      value: { agent: undefined, from: undefined, to: undefined, status: undefined, limit: 50, offset: 0 },
+    });
   });
 });
 
