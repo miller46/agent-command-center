@@ -1,16 +1,40 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { mockAgents } from '../data/mockAgents';
+import type { Agent } from '../types/agent';
 import { StatusBadge } from '../components/StatusBadge';
 import { SkillsDisplay } from '../components/SkillsDisplay';
 import { useSkills } from '../hooks/useSkills';
-import { ArrowLeft, Clock, Activity, Settings, Play, Pause, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Clock, Settings, Play, Pause, RotateCcw } from 'lucide-react';
 
 export const AgentDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const agent = mockAgents.find(a => a.id === id);
-  const { skills, loading, error, refetch } = useSkills(id);
+  const [agent, setAgent] = useState<Agent | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { skills, loading: skillsLoading, error, refetch } = useSkills(id);
+
+  useEffect(() => {
+    if (id) {
+      fetch(`/api/agents/${id}`)
+        .then(res => res.json())
+        .then(data => {
+          setAgent(data);
+          setLoading(false);
+        })
+        .catch(() => {
+          setAgent(null);
+          setLoading(false);
+        });
+    }
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <p className="text-slate-500">Loading...</p>
+      </div>
+    );
+  }
 
   if (!agent) {
     return (
@@ -100,29 +124,14 @@ export const AgentDetailPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Activity Log</h2>
-            <div className="space-y-4">
-              {[
-                { action: 'Agent initialized', time: '2 hours ago' },
-                { action: 'Task completed: Code review', time: '4 hours ago' },
-                { action: 'Connected to workspace', time: '1 day ago' },
-              ].map((log, i) => (
-                <div key={i} className="flex items-center gap-4 py-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                  <p className="flex-1 text-slate-700">{log.action}</p>
-                  <p className="text-sm text-slate-500">{log.time}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* Activity Log - Placeholder removed, will show real data when available */}
 
           {/* Skills Section */}
           <div className="bg-white rounded-xl border border-slate-200 p-6">
             <SkillsDisplay
               agentId={id || ''}
               skills={skills}
-              loading={loading}
+              loading={skillsLoading}
               error={error}
               onRetry={refetch}
             />
@@ -152,33 +161,6 @@ export const AgentDetailPage: React.FC = () => {
                   <span>Last Active</span>
                 </div>
                 <p className="font-medium text-slate-900 mt-1">{formatDate(agent.lastActive)}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Metrics</h2>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-slate-600">
-                  <Activity size={16} />
-                  <span>Tasks Completed</span>
-                </div>
-                <span className="font-semibold text-slate-900">42</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-slate-600">
-                  <Activity size={16} />
-                  <span>Success Rate</span>
-                </div>
-                <span className="font-semibold text-green-600">98.5%</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-slate-600">
-                  <Activity size={16} />
-                  <span>Avg Response</span>
-                </div>
-                <span className="font-semibold text-slate-900">2.3s</span>
               </div>
             </div>
           </div>

@@ -1,21 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useSkills, fetchSkillsByAgentId } from './useSkills';
-import { getMockSkills } from '../data/mockSkills';
 
-// Mock the mockSkills module
-vi.mock('../data/mockSkills', () => ({
-  getMockSkills: vi.fn(),
-}));
+// Mock fetch
+const mockFetch = vi.fn();
+vi.stubGlobal('fetch', mockFetch);
 
 describe('useSkills', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers({ shouldAdvanceTime: true });
   });
 
   afterEach(() => {
-    vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   describe('useSkills hook', () => {
@@ -28,38 +25,41 @@ describe('useSkills', () => {
     });
 
     it('should fetch skills successfully', async () => {
-      const mockSkillData = [
-        {
-          name: 'test-skill',
-          description: 'Test description',
-          attributes: { key: 'value' },
-        },
-      ];
-      vi.mocked(getMockSkills).mockReturnValue(mockSkillData);
+      const mockSkillData = {
+        data: [
+          {
+            name: 'test-skill',
+            description: 'Test description',
+            attributes: { key: 'value' },
+          },
+        ],
+      };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockSkillData,
+      });
 
       const { result } = renderHook(() => useSkills('agent-1'));
 
       // Should start loading
       expect(result.current.loading).toBe(true);
 
-      // Advance timers to complete the mock delay
-      await vi.advanceTimersByTimeAsync(500);
-
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
       });
 
-      expect(result.current.skills).toEqual(mockSkillData);
+      expect(result.current.skills).toEqual(mockSkillData.data);
       expect(result.current.error).toBeNull();
-      expect(getMockSkills).toHaveBeenCalledWith('agent-1');
+      expect(mockFetch).toHaveBeenCalledWith('/api/v1/agents/agent-1/skills');
     });
 
     it('should handle empty skills response', async () => {
-      vi.mocked(getMockSkills).mockReturnValue([]);
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: [] }),
+      });
 
       const { result } = renderHook(() => useSkills('agent-1'));
-
-      await vi.advanceTimersByTimeAsync(500);
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -69,95 +69,91 @@ describe('useSkills', () => {
       expect(result.current.error).toBeNull();
     });
 
-    it('should refetch when refetch is called', async () => {
-      const mockSkillData = [
-        {
-          name: 'test-skill',
-          description: 'Test description',
-          attributes: {},
-        },
-      ];
-      vi.mocked(getMockSkills).mockReturnValue(mockSkillData);
+    it('should handle fetch error', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        statusText: 'Not Found',
+      });
 
       const { result } = renderHook(() => useSkills('agent-1'));
 
-      await vi.advanceTimersByTimeAsync(500);
-
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
       });
 
-      // Clear mock to track next call
-      vi.mocked(getMockSkills).mockClear();
-      vi.mocked(getMockSkills).mockReturnValue(mockSkillData);
+      expect(result.current.skills).toEqual([]);
+      expect(result.current.error).toBe('Failed to fetch skills: Not Found');
+    });
+
+    it('should refetch when refetch is called', async () => {
+      const mockSkillData = {
+        data: [
+          {
+            name: 'test-skill',
+            description: 'Test description',
+            attributes: {},
+          },
+        ],
+      };
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => mockSkillData,
+      });
+
+      const { result } = renderHook(() => useSkills('agent-1'));
+
+      // Wait for initial fetch to complete
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
 
       // Refetch
-      await act(async () => {
+      act(() => {
         result.current.refetch();
       });
 
-      // Wait for loading state to update
+      // Wait for second fetch to complete
       await waitFor(() => {
-        expect(result.current.loading).toBe(true);
+        expect(mockFetch).toHaveBeenCalledTimes(2);
       });
 
-      await vi.advanceTimersByTimeAsync(500);
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      expect(getMockSkills).toHaveBeenCalledTimes(1);
-    });
-
-    it('should update when agentId changes', async () => {
-      const mockSkills1 = [{ name: 'skill-1', attributes: {} }];
-      const mockSkills2 = [{ name: 'skill-2', attributes: {} }];
-
-      vi.mocked(getMockSkills)
-        .mockReturnValueOnce(mockSkills1)
-        .mockReturnValueOnce(mockSkills2);
-
-      const { result, rerender } = renderHook(
-        ({ agentId }) => useSkills(agentId),
-        { initialProps: { agentId: 'agent-1' } }
-      );
-
-      await vi.advanceTimersByTimeAsync(500);
-
-      await waitFor(() => {
-        expect(result.current.skills).toEqual(mockSkills1);
-      });
-
-      // Change agentId
-      rerender({ agentId: 'agent-2' });
-
-      await vi.advanceTimersByTimeAsync(500);
-
-      await waitFor(() => {
-        expect(result.current.skills).toEqual(mockSkills2);
-      });
+      expect(result.current.skills).toEqual(mockSkillData.data);
     });
   });
 
   describe('fetchSkillsByAgentId', () => {
     it('should fetch skills by agent ID', async () => {
-      const mockSkillData = [
-        {
-          name: 'test-skill',
-          description: 'Test description',
-          attributes: {},
-        },
-      ];
-      vi.mocked(getMockSkills).mockReturnValue(mockSkillData);
+      const mockSkillData = {
+        data: [
+          {
+            name: 'test-skill',
+            description: 'Test description',
+            attributes: {},
+          },
+        ],
+      };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockSkillData,
+      });
 
-      const promise = fetchSkillsByAgentId('agent-1');
-      await vi.advanceTimersByTimeAsync(500);
+      const result = await fetchSkillsByAgentId('agent-1');
 
-      const result = await promise;
+      expect(result).toEqual(mockSkillData.data);
+      expect(mockFetch).toHaveBeenCalledWith('/api/v1/agents/agent-1/skills');
+    });
 
-      expect(result).toEqual(mockSkillData);
-      expect(getMockSkills).toHaveBeenCalledWith('agent-1');
+    it('should throw on error response', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        statusText: 'Server Error',
+      });
+
+      await expect(fetchSkillsByAgentId('agent-1')).rejects.toThrow(
+        'Failed to fetch skills: Server Error'
+      );
     });
   });
 });
