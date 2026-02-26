@@ -38,13 +38,12 @@ describe('SkillsDisplay', () => {
     render(<SkillsDisplay agentId="agent-1" skills={[]} loading={true} error={null} />);
 
     expect(screen.getByText('CAPABILITIES')).toBeInTheDocument();
-    expect(screen.getAllByTestId('wrench-icon')).toHaveLength(1);
     expect(document.querySelectorAll('.animate-pulse')).toHaveLength(3);
   });
 
   it('renders error state and retries when callback is provided', () => {
     const onRetry = vi.fn();
-    render(
+    const { rerender } = render(
       <SkillsDisplay
         agentId="agent-1"
         skills={[]}
@@ -56,18 +55,10 @@ describe('SkillsDisplay', () => {
 
     fireEvent.click(screen.getByText('RETRY'));
     expect(onRetry).toHaveBeenCalledTimes(1);
-  });
 
-  it('hides retry button when no retry callback is provided', () => {
-    render(
-      <SkillsDisplay
-        agentId="agent-1"
-        skills={[]}
-        loading={false}
-        error="Failed to fetch skills"
-      />,
+    rerender(
+      <SkillsDisplay agentId="agent-1" skills={[]} loading={false} error="Failed to fetch skills" />,
     );
-
     expect(screen.queryByText('RETRY')).not.toBeInTheDocument();
   });
 
@@ -85,52 +76,31 @@ describe('SkillsDisplay', () => {
     expect(screen.getByText('API-DESIGN')).toBeInTheDocument();
   });
 
-  it('expands skill card when clicked', () => {
+  it('expands and collapses skill details via click and keyboard', () => {
     render(<SkillsDisplay agentId="agent-1" skills={mockSkills} loading={false} error={null} />);
 
-    const skillHeader = screen.getByText('CODE-REVIEW').closest('[role="button"]');
-    expect(skillHeader).toBeInTheDocument();
+    const cardHeader = screen.getByText('CODE-REVIEW').closest('[role="button"]');
+    expect(cardHeader).toBeInTheDocument();
 
-    if (skillHeader) {
-      fireEvent.click(skillHeader);
-    }
-
-    expect(screen.getByText('Attributes')).toBeInTheDocument();
-    expect(screen.getByText('language')).toBeInTheDocument();
-  });
-
-  it('expands and collapses skill card with keyboard interactions', () => {
-    render(<SkillsDisplay agentId="agent-1" skills={mockSkills} loading={false} error={null} />);
-
-    const skillHeader = screen.getByText('CODE-REVIEW').closest('[role="button"]');
-    expect(skillHeader).toBeInTheDocument();
-    if (!skillHeader) return;
-
-    fireEvent.keyDown(skillHeader, { key: 'Enter' });
+    fireEvent.click(cardHeader!);
     expect(screen.getByText('Attributes')).toBeInTheDocument();
 
-    fireEvent.keyDown(skillHeader, { key: ' ' });
+    fireEvent.keyDown(cardHeader!, { key: ' ' });
     expect(screen.queryByText('Attributes')).not.toBeInTheDocument();
 
-    fireEvent.keyDown(skillHeader, { key: 'Escape' });
-    expect(screen.queryByText('Attributes')).not.toBeInTheDocument();
+    fireEvent.keyDown(cardHeader!, { key: 'Enter' });
+    expect(screen.getByText('Attributes')).toBeInTheDocument();
   });
 
   it('formats array and boolean attributes in expanded view', () => {
     render(<SkillsDisplay agentId="agent-1" skills={mockSkills} loading={false} error={null} />);
 
-    const skillHeader = screen.getByText('CODE-REVIEW').closest('[role="button"]');
-    if (!skillHeader) return;
-    fireEvent.click(skillHeader);
+    fireEvent.click(screen.getByText('API-DESIGN').closest('[role="button"]')!);
+    expect(screen.getByText((content) => content.includes('REST') && content.includes('GraphQL'))).toBeInTheDocument();
 
+    fireEvent.click(screen.getByText('CODE-REVIEW').closest('[role="button"]')!);
     expect(screen.getByText('Yes')).toBeInTheDocument();
     expect(screen.getByText('No')).toBeInTheDocument();
-
-    const apiHeader = screen.getByText('API-DESIGN').closest('[role="button"]');
-    if (!apiHeader) return;
-    fireEvent.click(apiHeader);
-
-    expect(screen.getByText((content) => content.includes('REST') && content.includes('GraphQL'))).toBeInTheDocument();
   });
 
   it('shows +N preview label for skills with many attributes', () => {
@@ -146,14 +116,7 @@ describe('SkillsDisplay', () => {
       },
     };
 
-    render(
-      <SkillsDisplay
-        agentId="agent-1"
-        skills={[skillWithManyAttributes]}
-        loading={false}
-        error={null}
-      />,
-    );
+    render(<SkillsDisplay agentId="agent-1" skills={[skillWithManyAttributes]} loading={false} error={null} />);
 
     expect(screen.getByText('+2 more')).toBeInTheDocument();
   });

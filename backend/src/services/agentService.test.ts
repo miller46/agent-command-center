@@ -65,8 +65,8 @@ before(async () => {
     { timestamp: "2026-02-22T09:05:00.000Z", message: "still running", status: "busy" },
   ]);
 
-  await writeSession("beta", "run-2.jsonl", [
-    { timestamp: "2026-02-22T10:00:00.000Z", message: "x".repeat(9000), status: "idle" },
+  await writeSession("beta", "run-long.jsonl", [
+    { timestamp: "2026-02-23T09:00:00.000Z", message: "x".repeat(9000), status: "busy" },
   ]);
 });
 
@@ -152,25 +152,16 @@ describe("parseRunsQuery", () => {
     assert.deepEqual(parseRunsQuery({ limit: "201" }), { valid: false, error: "Invalid 'limit'. Must be between 1 and 200" });
   });
 
-  it("falls back to defaults for empty offset and limit", () => {
-    const result = parseRunsQuery({ limit: "", offset: "" });
-    assert.deepEqual(result, {
+  it("falls back to defaults for empty/invalid offset and limit", () => {
+    assert.deepEqual(parseRunsQuery({ limit: "", offset: "" }), {
       valid: true,
       value: { agent: undefined, from: undefined, to: undefined, status: undefined, limit: 50, offset: 0 },
     });
-  });
 
-  it("defaults offset when provided offset is invalid", () => {
-    const result = parseRunsQuery({ offset: "-1" });
-    assert.deepEqual(result, {
+    assert.deepEqual(parseRunsQuery({ offset: "-1" }), {
       valid: true,
       value: { agent: undefined, from: undefined, to: undefined, status: undefined, limit: 50, offset: 0 },
     });
-  });
-
-  it("rejects out-of-range limit", () => {
-    const result = parseRunsQuery({ limit: "999" });
-    assert.equal(result.valid, false);
   });
 });
 
@@ -189,16 +180,24 @@ describe("listAgentRuns", () => {
     assert.ok(typeof result.data[0].logs === "string");
   });
 
-  it("filters by agent and status", async () => {
-    const query = parseRunsQuery({ agent: "alpha", status: "error", limit: "50" });
-    assert.equal(query.valid, true);
-    if (!query.valid) return;
+  it("filters by agent/status and date range", async () => {
+    const statusQuery = parseRunsQuery({ agent: "alpha", status: "error", limit: "50" });
+    assert.equal(statusQuery.valid, true);
+    if (!statusQuery.valid) return;
 
-    const result = await listAgentRuns(query.value);
+    const statusResult = await listAgentRuns(statusQuery.value);
+    assert.equal(statusResult.data.length, 1);
+    assert.equal(statusResult.data[0].agent, "alpha");
+    assert.equal(statusResult.data[0].status, "error");
 
-    assert.equal(result.data.length, 1);
-    assert.equal(result.data[0].agent, "alpha");
-    assert.equal(result.data[0].status, "error");
+    const dateQuery = parseRunsQuery({ from: "2026-02-22T00:00:00.000Z", to: "2026-02-22T23:59:59.000Z" });
+    assert.equal(dateQuery.valid, true);
+    if (!dateQuery.valid) return;
+
+    const dateResult = await listAgentRuns(dateQuery.value);
+    assert.equal(dateResult.data.length, 1);
+    assert.equal(dateResult.data[0].agent, "beta");
+    assert.equal(dateResult.data[0].id, "beta:run-1.jsonl");
   });
 
   it("applies inclusive time filters and truncates oversized logs", async () => {
@@ -214,14 +213,15 @@ describe("listAgentRuns", () => {
     assert.equal(boundaryResult.data.length, 1);
     assert.equal(boundaryResult.data[0].agent, "beta");
 
-    const longLogQuery = parseRunsQuery({ agent: "beta", limit: "5" });
+    const longLogQuery = parseRunsQuery({ agent: "beta", limit: "10" });
     assert.equal(longLogQuery.valid, true);
     if (!longLogQuery.valid) return;
 
     const longLogResult = await listAgentRuns(longLogQuery.value);
-    const longRun = longLogResult.data.find((run) => run.id.endsWith("run-2.jsonl"));
+    const longRun = longLogResult.data.find((run) => run.id === "beta:run-long.jsonl");
 
     assert.ok(longRun);
     assert.match(longRun.logs, /\.\.\.\[truncated\]$/);
+    assert.ok(longRun.logs.length < 8200);
   });
 });
