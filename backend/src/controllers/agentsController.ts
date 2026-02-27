@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import {
   getAgentById,
   listAgentRuns,
-  listAgents,
+  listAgentsFromConfig,
   listAgentSkills,
   parseRunsQuery,
 } from "../services/agentService.js";
@@ -10,10 +10,10 @@ import { logError } from "../utils/logger.js";
 
 export const getAgents = async (_req: Request, res: Response): Promise<void> => {
   try {
-    const agents = await listAgents();
-    res.json({ data: agents });
+    const agents = await listAgentsFromConfig();
+    res.json(agents);
   } catch (error) {
-    logError("Failed to load agents", error);
+    logError("Failed to load agents from openclaw config", error);
     res.status(500).json({ error: "Failed to load agents" });
   }
 };
