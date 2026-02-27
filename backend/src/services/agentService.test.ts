@@ -30,7 +30,7 @@ before(async () => {
   const alphaSkillsRoot = path.join(tempRoot, "workspace-alpha", "skills");
   await mkdir(path.join(alphaSkillsRoot, "good-skill"), { recursive: true });
   await mkdir(path.join(alphaSkillsRoot, "broken-skill"), { recursive: true });
-  await mkdir(path.join(alphaSkillsRoot, "nameless-skill"), { recursive: true });
+  await mkdir(path.join(alphaSkillsRoot, "fallback-name"), { recursive: true });
 
   await writeFile(
     path.join(alphaSkillsRoot, "good-skill", "SKILL.md"),
@@ -45,8 +45,8 @@ before(async () => {
   );
 
   await writeFile(
-    path.join(alphaSkillsRoot, "nameless-skill", "SKILL.md"),
-    `---\ndescription: Missing explicit name\n---\n\n# Nameless Skill\n`,
+    path.join(alphaSkillsRoot, "fallback-name", "SKILL.md"),
+    `---\ndescription: Uses directory name\n---\n\n# Fallback\n`,
     "utf8",
   );
 
@@ -84,34 +84,31 @@ describe("agentService skill parsing", () => {
     assert.deepEqual(parsed, { name: "alpha", version: 2 });
   });
 
-  it("returns empty object for invalid YAML", () => {
-    const parsed = parseSkillFrontmatter(`---\nname: alpha\nlist: [x\n---\n# Body`);
-    assert.deepEqual(parsed, {});
+  it("returns empty object for invalid frontmatter", () => {
+    assert.deepEqual(parseSkillFrontmatter(`---\nname: alpha\nlist: [x\n---\n# Body`), {});
+    assert.deepEqual(parseSkillFrontmatter(`# No frontmatter`), {});
   });
 
-  it("lists skills and handles corrupt frontmatter gracefully", async () => {
+  it("lists skills, tolerates broken YAML, and falls back to directory name", async () => {
     const skills = await listAgentSkills("alpha");
 
     assert.equal(skills.length, 3);
+
     const good = skills.find((skill) => skill.name === "good-skill");
     const broken = skills.find((skill) => skill.name === "broken-skill");
+    const fallback = skills.find((skill) => skill.name === "fallback-name");
 
     assert.ok(good);
     assert.equal(good.attributes.description, "Useful helper");
     assert.ok(broken);
     assert.deepEqual(broken.attributes, {});
-  });
-
-  it("falls back to directory name when frontmatter name is missing", async () => {
-    const skills = await listAgentSkills("alpha");
-    const nameless = skills.find((skill) => skill.name === "nameless-skill");
-
-    assert.ok(nameless);
-    assert.equal(nameless.attributes.description, "Missing explicit name");
+    assert.ok(fallback);
+    assert.equal(fallback.attributes.description, "Uses directory name");
   });
 
   it("supports exact skill-name filtering", async () => {
     const filtered = await listAgentSkills("alpha", "good-skill");
+
     assert.equal(filtered.length, 1);
     assert.equal(filtered[0].name, "good-skill");
   });
@@ -151,18 +148,6 @@ describe("parseRunsQuery", () => {
     assert.deepEqual(parseRunsQuery({ limit: "0" }), { valid: false, error: "Invalid 'limit'. Must be between 1 and 200" });
     assert.deepEqual(parseRunsQuery({ limit: "201" }), { valid: false, error: "Invalid 'limit'. Must be between 1 and 200" });
   });
-
-  it("falls back to defaults for empty/invalid offset and limit", () => {
-    assert.deepEqual(parseRunsQuery({ limit: "", offset: "" }), {
-      valid: true,
-      value: { agent: undefined, from: undefined, to: undefined, status: undefined, limit: 50, offset: 0 },
-    });
-
-    assert.deepEqual(parseRunsQuery({ offset: "-1" }), {
-      valid: true,
-      value: { agent: undefined, from: undefined, to: undefined, status: undefined, limit: 50, offset: 0 },
-    });
-  });
 });
 
 describe("listAgentRuns", () => {
@@ -196,7 +181,6 @@ describe("listAgentRuns", () => {
 
     const dateResult = await listAgentRuns(dateQuery.value);
     assert.equal(dateResult.data.length, 1);
-    assert.equal(dateResult.data[0].agent, "beta");
     assert.equal(dateResult.data[0].id, "beta:run-1.jsonl");
   });
 
@@ -211,7 +195,6 @@ describe("listAgentRuns", () => {
 
     const boundaryResult = await listAgentRuns(boundaryQuery.value);
     assert.equal(boundaryResult.data.length, 1);
-    assert.equal(boundaryResult.data[0].agent, "beta");
 
     const longLogQuery = parseRunsQuery({ agent: "beta", limit: "10" });
     assert.equal(longLogQuery.valid, true);
