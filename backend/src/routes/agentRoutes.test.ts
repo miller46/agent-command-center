@@ -9,6 +9,12 @@ import agentRoutes from "./agentRoutes.js";
 
 let tempRoot = "";
 
+const buildApp = () => {
+  const app = express();
+  app.use("/api", agentRoutes);
+  return app;
+};
+
 before(async () => {
   tempRoot = await mkdtemp(path.join(os.tmpdir(), "agent-routes-test-"));
 
@@ -45,10 +51,7 @@ after(async () => {
 
 describe("GET /api/v1/agents/:id/skills", () => {
   it("returns parsed skill metadata", async () => {
-    const app = express();
-    app.use("/api", agentRoutes);
-
-    const response = await request(app).get("/api/v1/agents/bravo/skills");
+    const response = await request(buildApp()).get("/api/v1/agents/bravo/skills");
 
     assert.equal(response.status, 200);
     assert.equal(Array.isArray(response.body.data), true);
@@ -58,10 +61,7 @@ describe("GET /api/v1/agents/:id/skills", () => {
   });
 
   it("supports name filtering", async () => {
-    const app = express();
-    app.use("/api", agentRoutes);
-
-    const response = await request(app).get("/api/v1/agents/bravo/skills?name=missing");
+    const response = await request(buildApp()).get("/api/v1/agents/bravo/skills?name=missing");
 
     assert.equal(response.status, 200);
     assert.deepEqual(response.body.data, []);
@@ -70,10 +70,7 @@ describe("GET /api/v1/agents/:id/skills", () => {
 
 describe("GET /api/v1/agents/runs", () => {
   it("returns run history with pagination", async () => {
-    const app = express();
-    app.use("/api", agentRoutes);
-
-    const response = await request(app).get("/api/v1/agents/runs?limit=10&offset=0");
+    const response = await request(buildApp()).get("/api/v1/agents/runs?limit=10&offset=0");
 
     assert.equal(response.status, 200);
     assert.equal(Array.isArray(response.body.data), true);
@@ -83,10 +80,7 @@ describe("GET /api/v1/agents/runs", () => {
   });
 
   it("validates bad query params", async () => {
-    const app = express();
-    app.use("/api", agentRoutes);
-
-    const response = await request(app).get("/api/v1/agents/runs?status=not-real");
+    const response = await request(buildApp()).get("/api/v1/agents/runs?status=not-real");
 
     assert.equal(response.status, 400);
     assert.match(response.body.error, /Invalid 'status'/);

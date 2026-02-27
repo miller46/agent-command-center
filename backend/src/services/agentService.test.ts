@@ -30,6 +30,7 @@ before(async () => {
   const alphaSkillsRoot = path.join(tempRoot, "workspace-alpha", "skills");
   await mkdir(path.join(alphaSkillsRoot, "good-skill"), { recursive: true });
   await mkdir(path.join(alphaSkillsRoot, "broken-skill"), { recursive: true });
+  await mkdir(path.join(alphaSkillsRoot, "fallback-name"), { recursive: true });
 
   await writeFile(
     path.join(alphaSkillsRoot, "good-skill", "SKILL.md"),
@@ -40,6 +41,12 @@ before(async () => {
   await writeFile(
     path.join(alphaSkillsRoot, "broken-skill", "SKILL.md"),
     `---\nname: broken-skill\ndescription: [oops\n---\n\n# Broken\n`,
+    "utf8",
+  );
+
+  await writeFile(
+    path.join(alphaSkillsRoot, "fallback-name", "SKILL.md"),
+    `---\ndescription: Uses directory name\n---\n\n# Fallback\n`,
     "utf8",
   );
 
@@ -57,6 +64,10 @@ before(async () => {
     { timestamp: "2026-02-22T09:00:00.000Z", message: "started", status: "busy" },
     { timestamp: "2026-02-22T09:05:00.000Z", message: "still running", status: "busy" },
   ]);
+
+  await writeSession("beta", "run-long.jsonl", [
+    { timestamp: "2026-02-23T09:00:00.000Z", message: "x".repeat(9000), status: "busy" },
+  ]);
 });
 
 after(async () => {
@@ -70,29 +81,29 @@ after(async () => {
 describe("agentService skill parsing", () => {
   it("parses YAML frontmatter into attributes", () => {
     const parsed = parseSkillFrontmatter(`---\nname: alpha\nversion: 2\n---\n# Body`);
-
-    assert.equal(parsed.name, "alpha");
-    assert.equal(parsed.version, 2);
+    assert.deepEqual(parsed, { name: "alpha", version: 2 });
   });
 
-  it("returns empty object for invalid YAML", () => {
-    const parsed = parseSkillFrontmatter(`---\nname: alpha\nlist: [x\n---\n# Body`);
-
-    assert.deepEqual(parsed, {});
+  it("returns empty object for invalid frontmatter", () => {
+    assert.deepEqual(parseSkillFrontmatter(`---\nname: alpha\nlist: [x\n---\n# Body`), {});
+    assert.deepEqual(parseSkillFrontmatter(`# No frontmatter`), {});
   });
 
-  it("lists skills and handles corrupt frontmatter gracefully", async () => {
+  it("lists skills, tolerates broken YAML, and falls back to directory name", async () => {
     const skills = await listAgentSkills("alpha");
 
-    assert.equal(skills.length, 2);
+    assert.equal(skills.length, 3);
 
     const good = skills.find((skill) => skill.name === "good-skill");
+    const broken = skills.find((skill) => skill.name === "broken-skill");
+    const fallback = skills.find((skill) => skill.name === "fallback-name");
+
     assert.ok(good);
     assert.equal(good.attributes.description, "Useful helper");
-
-    const broken = skills.find((skill) => skill.name === "broken-skill");
     assert.ok(broken);
     assert.deepEqual(broken.attributes, {});
+    assert.ok(fallback);
+    assert.equal(fallback.attributes.description, "Uses directory name");
   });
 
   it("supports exact skill-name filtering", async () => {
@@ -114,22 +125,28 @@ describe("parseRunsQuery", () => {
       offset: "2",
     });
 
-    assert.equal(result.valid, true);
-    if (result.valid) {
-      assert.deepEqual(result.value, {
+    assert.deepEqual(result, {
+      valid: true,
+      value: {
         agent: "alpha",
         from: "2026-02-20T00:00:00.000Z",
         to: "2026-02-23T00:00:00.000Z",
         status: "idle",
         limit: 10,
         offset: 2,
-      });
-    }
+      },
+    });
   });
 
-  it("rejects invalid status", () => {
-    const result = parseRunsQuery({ status: "done" });
-    assert.equal(result.valid, false);
+  it("rejects invalid date, status, and limit boundary values", () => {
+    assert.deepEqual(parseRunsQuery({ from: "not-a-date" }), { valid: false, error: "Invalid 'from' date" });
+    assert.deepEqual(parseRunsQuery({ to: "still-not-a-date" }), { valid: false, error: "Invalid 'to' date" });
+    assert.deepEqual(parseRunsQuery({ status: "done" }), {
+      valid: false,
+      error: "Invalid 'status'. Must be one of: idle, busy, error",
+    });
+    assert.deepEqual(parseRunsQuery({ limit: "0" }), { valid: false, error: "Invalid 'limit'. Must be between 1 and 200" });
+    assert.deepEqual(parseRunsQuery({ limit: "201" }), { valid: false, error: "Invalid 'limit'. Must be between 1 and 200" });
   });
 });
 
@@ -141,22 +158,53 @@ describe("listAgentRuns", () => {
 
     const result = await listAgentRuns(query.value);
 
-    assert.equal(result.pagination.total, 3);
+    assert.equal(result.pagination.total, 4);
     assert.equal(result.data.length, 2);
     assert.ok(result.data[0].id);
     assert.ok(result.data[0].agent);
     assert.ok(typeof result.data[0].logs === "string");
   });
 
-  it("filters by agent and status", async () => {
-    const query = parseRunsQuery({ agent: "alpha", status: "error", limit: "50" });
-    assert.equal(query.valid, true);
-    if (!query.valid) return;
+  it("filters by agent/status and date range", async () => {
+    const statusQuery = parseRunsQuery({ agent: "alpha", status: "error", limit: "50" });
+    assert.equal(statusQuery.valid, true);
+    if (!statusQuery.valid) return;
 
-    const result = await listAgentRuns(query.value);
+    const statusResult = await listAgentRuns(statusQuery.value);
+    assert.equal(statusResult.data.length, 1);
+    assert.equal(statusResult.data[0].agent, "alpha");
+    assert.equal(statusResult.data[0].status, "error");
 
-    assert.equal(result.data.length, 1);
-    assert.equal(result.data[0].agent, "alpha");
-    assert.equal(result.data[0].status, "error");
+    const dateQuery = parseRunsQuery({ from: "2026-02-22T00:00:00.000Z", to: "2026-02-22T23:59:59.000Z" });
+    assert.equal(dateQuery.valid, true);
+    if (!dateQuery.valid) return;
+
+    const dateResult = await listAgentRuns(dateQuery.value);
+    assert.equal(dateResult.data.length, 1);
+    assert.equal(dateResult.data[0].id, "beta:run-1.jsonl");
+  });
+
+  it("applies inclusive time filters and truncates oversized logs", async () => {
+    const boundaryQuery = parseRunsQuery({
+      from: "2026-02-22T09:00:00.000Z",
+      to: "2026-02-22T09:00:00.000Z",
+      limit: "50",
+    });
+    assert.equal(boundaryQuery.valid, true);
+    if (!boundaryQuery.valid) return;
+
+    const boundaryResult = await listAgentRuns(boundaryQuery.value);
+    assert.equal(boundaryResult.data.length, 1);
+
+    const longLogQuery = parseRunsQuery({ agent: "beta", limit: "10" });
+    assert.equal(longLogQuery.valid, true);
+    if (!longLogQuery.valid) return;
+
+    const longLogResult = await listAgentRuns(longLogQuery.value);
+    const longRun = longLogResult.data.find((run) => run.id === "beta:run-long.jsonl");
+
+    assert.ok(longRun);
+    assert.match(longRun.logs, /\.\.\.\[truncated\]$/);
+    assert.ok(longRun.logs.length < 8200);
   });
 });
