@@ -14,6 +14,7 @@ import type {
 } from "../types/agent.js";
 
 const DEFAULT_OPENCLAW_ROOT = path.join(os.homedir(), ".openclaw");
+const DEFAULT_OPENCLAW_CONFIG_PATH = path.join(DEFAULT_OPENCLAW_ROOT, "openclaw.json");
 const DEFAULT_AGENTS_ROOT = path.join(DEFAULT_OPENCLAW_ROOT, "agents");
 const MAIN_AGENT_ID = "main";
 const MAIN_SKILLS_ROOT = "/workspace/skills";
@@ -22,6 +23,8 @@ const MAX_RUN_LIMIT = 200;
 const LOG_TRUNCATE_LIMIT = 8000;
 
 const getConfiguredOpenclawRoot = (): string => process.env.OPENCLAW_ROOT ?? DEFAULT_OPENCLAW_ROOT;
+const getConfiguredOpenclawConfigPath = (): string =>
+  process.env.OPENCLAW_CONFIG_PATH ?? DEFAULT_OPENCLAW_CONFIG_PATH;
 const getConfiguredAgentsRoot = (): string => process.env.OPENCLAW_AGENTS_ROOT ?? DEFAULT_AGENTS_ROOT;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -302,6 +305,18 @@ export const parseRunsQuery = (
       offset,
     },
   };
+};
+
+export const listAgentsFromConfig = async (): Promise<unknown[]> => {
+  const configPath = getConfiguredOpenclawConfigPath();
+  const configContent = await fs.readFile(configPath, "utf8");
+  const parsed = safeJsonParse<Record<string, unknown>>(configContent);
+
+  if (!parsed || !Array.isArray(parsed.agents)) {
+    return [];
+  }
+
+  return parsed.agents;
 };
 
 export const listAgents = async (): Promise<AgentSummary[]> => {

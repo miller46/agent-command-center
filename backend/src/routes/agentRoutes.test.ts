@@ -20,6 +20,13 @@ before(async () => {
 
   process.env.OPENCLAW_ROOT = tempRoot;
   process.env.OPENCLAW_AGENTS_ROOT = tempRoot;
+  process.env.OPENCLAW_CONFIG_PATH = path.join(tempRoot, "openclaw.json");
+
+  await writeFile(
+    process.env.OPENCLAW_CONFIG_PATH,
+    JSON.stringify({ agents: ["main", "backend-dev", "research"] }, null, 2),
+    "utf8",
+  );
 
   const skillsRoot = path.join(tempRoot, "workspace-bravo", "skills", "route-skill");
   await mkdir(skillsRoot, { recursive: true });
@@ -44,9 +51,31 @@ before(async () => {
 after(async () => {
   delete process.env.OPENCLAW_ROOT;
   delete process.env.OPENCLAW_AGENTS_ROOT;
+  delete process.env.OPENCLAW_CONFIG_PATH;
   if (tempRoot) {
     await rm(tempRoot, { recursive: true, force: true });
   }
+});
+
+describe("GET /api/agents", () => {
+  it("returns agent list from openclaw.json", async () => {
+    const response = await request(buildApp()).get("/api/agents");
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.body, ["main", "backend-dev", "research"]);
+  });
+
+  it("returns 500 when config cannot be read", async () => {
+    const originalConfigPath = process.env.OPENCLAW_CONFIG_PATH;
+    process.env.OPENCLAW_CONFIG_PATH = path.join(tempRoot, "missing-openclaw.json");
+
+    const response = await request(buildApp()).get("/api/agents");
+
+    process.env.OPENCLAW_CONFIG_PATH = originalConfigPath;
+
+    assert.equal(response.status, 500);
+    assert.equal(response.body.error, "Failed to load agents");
+  });
 });
 
 describe("GET /api/v1/agents/:id/skills", () => {
