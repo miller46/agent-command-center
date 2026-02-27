@@ -64,6 +64,21 @@ npm run backend:build
 npm run backend:start
 ```
 
+## Frontend network logging
+
+The frontend installs a global `fetch` logger that prints request/response details to the browser console:
+
+- method, URL, headers, payload
+- status, response headers, response body
+- ISO timestamp + request duration
+- sensitive headers (for example `Authorization`, `Cookie`, `X-Api-Key`) are redacted
+
+Enable/disable behavior:
+
+- `development`: enabled by default
+- `production`: disabled by default
+- override with env var `VITE_ENABLE_NETWORK_LOGGING=true|false`
+
 ## Notes
 
 If `~/.openclaw/agents/` does not exist or is unreadable, API requests will return an error response.
